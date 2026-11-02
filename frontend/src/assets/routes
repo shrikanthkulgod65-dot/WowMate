@@ -1,0 +1,31 @@
+<Routes>
+  <Route path="/" element={<Home />} />
+
+  <Route
+    path="/professional-matrimony"
+    element={<ProfessionalMatrimony />}
+  />
+
+  <Route
+    path="/farmer-matrimony"
+    element={<FarmerMatrimony />}
+  />
+
+  <Route
+    path="/broker-matrimony"
+    element={<BrokerMatrimony />}
+  />
+
+  <Route path="/about" element={<About />} />
+
+  {/* Keep your other existing routes here */}
+</Routes>
+<Route path="/blog" element={<Blog />} />
+<Route path="/login" element={<Login />} />
+<Route path="/register" element={<Register />} />
+<Route path="/admin" element={<AdminDashboard />} />
+<Route
+  path="/discover-profiles"
+  element={<DiscoverProfiles />}
+/>
+<Route path="/my-profile" element={<MyProfile />} />

@@ -1,0 +1,1122 @@
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+/* =========================================
+   WOWMATE HEADER / NAVBAR
+========================================= */
+
+.navbar {
+  width: 100%;
+  min-height: 82px;
+  padding: 12px 4%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  position: relative;
+  z-index: 1000;
+  background: #ffffff;
+  border-bottom: 1px solid #ddd6fe;
+  box-shadow: 0 2px 12px rgba(76, 29, 149, 0.08);
+  box-sizing: border-box;
+}
+
+/* Logo */
+
+.navbar .brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.navbar .brand-logo {
+  display: block;
+  width: 230px;
+  height: 62px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+/* Navigation links */
+
+.navbar .nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+  margin-left: auto;
+}
+
+.navbar .nav-links > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 0;
+  color: #333333;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.navbar .nav-links > a:hover,
+.navbar .nav-links > .login-link {
+  color: #6d28d9;
+}
+
+/* Register button */
+
+.navbar .nav-links > .register-button {
+  min-height: 42px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #8b5cf6;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.navbar .nav-links > .register-button:hover {
+  background: #6d28d9;
+  color: #ffffff;
+}
+
+/* Mobile menu button */
+
+.navbar .menu-toggle {
+  display: none;
+}
+
+/* =========================================
+   TABLET HEADER
+========================================= */
+
+@media (max-width: 1100px) {
+  .navbar {
+    padding-right: 3%;
+    padding-left: 3%;
+    gap: 16px;
+  }
+
+  .navbar .brand-logo {
+    width: 190px;
+    height: 56px;
+  }
+
+  .navbar .nav-links {
+    gap: 13px;
+  }
+
+  .navbar .nav-links > a {
+    font-size: 13px;
+  }
+
+  .navbar .nav-links > .register-button {
+    padding: 9px 12px;
+  }
+}
+
+/* =========================================
+   MOBILE HEADER
+========================================= */
+
+@media (max-width: 850px) {
+  .navbar {
+    min-height: 72px;
+    padding: 10px 18px;
+    gap: 12px;
+  }
+
+  .navbar .brand-logo {
+    width: 190px;
+    height: 52px;
+  }
+
+  .navbar .menu-toggle {
+    width: 43px;
+    height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #ddd6fe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #6d28d9;
+    cursor: pointer;
+  }
+
+  .navbar .nav-links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    margin: 0;
+    padding: 12px 20px 20px;
+    background: #ffffff;
+    border-top: 1px solid #ddd6fe;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .navbar .nav-links.nav-open {
+    display: flex;
+  }
+
+  .navbar .nav-links > a {
+    width: 100%;
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 12px 4px;
+    border-bottom: 1px solid #f3efff;
+    box-sizing: border-box;
+  }
+
+  .navbar .nav-links > .register-button {
+    width: 100%;
+    margin-top: 12px;
+    justify-content: center;
+    border-bottom: none;
+  }
+}
+
+/* Small mobile screens */
+
+@media (max-width: 380px) {
+  .navbar {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .navbar .brand-logo {
+    width: 150px;
+    height: 44px;
+  }
+}
+/* WOWMATE HERO SECTION */
+.home-page .home-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 540px;
+  box-sizing: border-box;
+  padding: 60px 5%;
+  background-color: #ede5ff;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(248, 245, 255, 0.96) 0%,
+      rgba(248, 245, 255, 0.85) 45%,
+      rgba(248, 245, 255, 0.15) 100%
+    ),
+    url("/image.png");
+  background-position: center right;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.home-page .hero-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.home-page .hero-content h1 {
+  max-width: 650px;
+  margin: 0 0 20px;
+  line-height: 1.2;
+}
+
+.home-page .hero-description {
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+.home-page .home-search-panel {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1150px;
+  margin: 30px auto 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .home-page .home-hero {
+    min-height: 0;
+    padding: 45px 20px;
+    background-position: 65% center;
+  }
+
+  .home-page .hero-content h1 {
+    font-size: clamp(30px, 7vw, 44px);
+  }
+
+  .home-page .home-search-panel {
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page .home-hero {
+    padding: 32px 16px;
+    background-position: center;
+  }
+}
+
+/* SITE FOOTER */
+
+.footer {
+  padding: 52px 24px 18px;
+  background: #2b1b46;
+  color: #fff;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  gap: 36px;
+  width: min(1180px, 100%);
+  margin: 0 auto 40px;
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.footer-logo .brand-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.footer-logo > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.footer-logo strong {
+  font-size: 18px;
+}
+
+.footer-logo small {
+  color: #d8c9f8;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.footer-brand > p {
+  max-width: 300px;
+  margin: 18px 0 0;
+  color: #ded6ec;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.footer-grid h3 {
+  margin: 0 0 17px;
+  color: #fff;
+  font-size: 15px;
+}
+
+.footer-grid > div:not(.footer-brand) > a {
+  display: block;
+  width: fit-content;
+  margin: 10px 0;
+  color: #ded6ec;
+  font-size: 13px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.footer-grid > div > a:hover {
+  color: #fff;
+}
+
+.footer-contact {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 10px 0;
+  color: #ded6ec;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.footer-contact svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #c4b5fd;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.footer-bottom p {
+  margin: 0;
+  color: #dfcfd6;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 850px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .footer {
+    padding: 40px 20px 18px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-bottom: 30px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+/* Wowmate — Royal Wedding Colour Theme */
+
+:root {
+  --primary-color: #8B5CF6;
+  --secondary-color: #A78BFA;
+  --accent-color: #6D28D9;
+  --background-color: #F8F5FF;
+  --surface-color: #FFFFFF;
+  --text-color: #30264a;
+  --muted-color: #716783;
+  --border-color: #DDD6FE;
+}
+
+/* Main page */
+body {
+  margin: 0;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+}
+
+/* Main headings */
+h1,
+h2,
+h3 {
+  color: #4c1d95;
+}
+
+/* Buttons */
+button,
+.btn,
+.primary-button {
+  background-color: var(--primary-color);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:hover,
+.btn:hover,
+.primary-button:hover {
+  background-color: var(--accent-color);
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: var(--accent-color);
+}
+
+/* Cards and content panels */
+.card,
+.profile-card,
+.content-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+/* Secondary highlights */
+.highlight,
+.gold-accent {
+  color: var(--secondary-color);
+}
+
+/* PRICING SECTION */
+.pricing-section {
+  padding: 85px 24px;
+  background: linear-gradient(180deg, #f8f5ff 0%, #fff 100%);
+  scroll-margin-top: 24px;
+}
+
+.pricing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pricing-heading {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.pricing-label {
+  color: #7c3aed;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.pricing-heading h1,
+.pricing-heading h2 {
+  margin: 14px 0;
+  color: #4c1d95;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.2;
+}
+
+.pricing-heading p {
+  color: #716783;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 25px;
+  align-items: stretch;
+}
+
+.pricing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 35px 28px;
+  background: #fff;
+  border: 1px solid #ddd6fe;
+  border-radius: 18px;
+  box-shadow: 0 10px 35px rgba(76, 29, 149, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pricing-section .pricing-starter {
+  border-top: 4px solid #c4b5fd;
+}
+
+.pricing-section .pricing-silver {
+  border-top: 4px solid #8b5cf6;
+}
+
+.pricing-section .pricing-gold {
+  border-top: 4px solid #6d28d9;
+}
+
+.pricing-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 18px 40px rgba(76, 29, 149, 0.14);
+}
+
+.pricing-card h3 {
+  color: #4c1d95;
+  font-size: 25px;
+  margin: 0 0 8px;
+}
+
+.pricing-description {
+  color: #716783;
+  font-size: 14px;
+  min-height: 22px;
+}
+
+.pricing-price {
+  margin: 25px 0;
+  color: #4c1d95;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.pricing-price span {
+  color: #716783;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.pricing-card ul {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 25px 0 30px;
+}
+
+.pricing-card li {
+  color: #403650;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3efff;
+}
+
+.pricing-card li span {
+  color: #8b5cf6;
+  font-weight: 800;
+}
+
+.pricing-button {
+  display: block;
+  width: 100%;
+  margin-top: auto;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  text-align: center;
+  text-decoration: none;
+  color: #fff;
+  background: #8b5cf6;
+  border-radius: 9px;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.pricing-button:hover {
+  background: #6d28d9;
+  color: #fff;
+}
+
+.pricing-featured {
+  border: 2px solid #a78bfa;
+  transform: translateY(-10px);
+}
+
+.pricing-featured:hover {
+  transform: translateY(-15px);
+}
+
+.pricing-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 18px;
+  white-space: nowrap;
+  background: #7c3aed;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pricing-note {
+  text-align: center;
+  margin-top: 35px;
+  color: #4c1d95;
+  font-weight: 600;
+}
+
+.pricing-note p {
+  margin: 10px 0;
+  color: #716783;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.pricing-note strong {
+  color: #4c1d95;
+}
+
+@media (max-width: 900px) {
+  .pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pricing-featured {
+    transform: none;
+  }
+
+  .pricing-featured:hover {
+    transform: translateY(-7px);
+  }
+}
+
+@media (max-width: 600px) {
+  .pricing-section {
+    padding: 60px 18px;
+  }
+
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .pricing-card {
+    padding: 30px 22px;
+  }
+}
+/* Wowmate My Profile */
+.mp-page {
+  min-height: 100vh;
+  padding: 32px 5%;
+  background: #f8f5ff;
+  color: #30264a;
+}
+
+.mp-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.mp-brand {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: #6d28d9;
+  font-size: 21px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mp-header h1 {
+  margin: 0 0 10px;
+  color: #6d28d9;
+  font-size: clamp(32px, 4vw, 44px);
+}
+
+.mp-header p {
+  color: #716783;
+  line-height: 1.7;
+}
+
+.mp-layout {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 285px minmax(0, 1fr);
+  align-items: start;
+  gap: 25px;
+}
+
+.mp-sidebar,
+.mp-content {
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid #ddd6fe;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(76, 29, 149, 0.06);
+}
+
+.mp-sidebar {
+  text-align: center;
+}
+
+.mp-avatar {
+  width: 95px;
+  height: 95px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ede5ff;
+  color: #6d28d9;
+  font-size: 43px;
+  font-weight: 800;
+}
+
+.mp-sidebar h2 {
+  overflow-wrap: anywhere;
+  margin: 0 0 8px;
+  font-size: 21px;
+}
+
+.mp-muted,
+.mp-location {
+  color: #716783;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.mp-profile-status {
+  margin: 22px 0;
+  padding: 12px;
+  border-radius: 9px;
+  background: #f5f0ff;
+  color: #5b21b6;
+  font-size: 13px;
+}
+
+.mp-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #d49b35;
+}
+
+.mp-edit-button,
+.mp-small-edit,
+.mp-save-button,
+.mp-cancel-button {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mp-edit-button,
+.mp-save-button {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.mp-edit-button {
+  width: 100%;
+}
+
+.mp-edit-button:hover,
+.mp-save-button:hover {
+  background: #6d28d9;
+}
+
+.mp-navigation {
+  display: grid;
+  gap: 9px;
+  margin-top: 25px;
+}
+
+.mp-navigation button {
+  padding: 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #514762;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mp-navigation button.active {
+  border-color: #c4b5fd;
+  background: #f5f0ff;
+  color: #6d28d9;
+  font-weight: 700;
+}
+
+.mp-content-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.mp-eyebrow {
+  color: #6d28d9;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.mp-content-heading h2 {
+  margin: 9px 0;
+  font-size: 25px;
+}
+
+.mp-content-heading p {
+  margin: 0;
+  color: #716783;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mp-small-edit {
+  flex-shrink: 0;
+  background: #f5f0ff;
+  color: #6d28d9;
+}
+
+.mp-section-title {
+  margin: 27px 0 17px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #ddd6fe;
+  color: #4c1d95;
+  font-size: 17px;
+}
+
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 19px;
+}
+
+.mp-grid label,
+.mp-full-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #403650;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mp-grid input,
+.mp-grid select,
+.mp-full-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  color: #30264a;
+  font: inherit;
+  font-weight: 400;
+}
+
+.mp-grid input:focus,
+.mp-grid select:focus,
+.mp-full-field textarea:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+}
+
+.mp-grid input:disabled,
+.mp-grid select:disabled,
+.mp-full-field textarea:disabled {
+  background: #f8f5ff;
+  color: #716783;
+  cursor: default;
+  opacity: 1;
+}
+
+.mp-full-field textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.mp-help {
+  margin-top: 25px;
+  padding: 15px;
+  border-radius: 9px;
+  background: #f5f0ff;
+  color: #5f5572;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.mp-message {
+  margin: 0 0 20px;
+  padding: 13px 15px;
+  border-radius: 8px;
+  background: #eaf8ed;
+  color: #216b35;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mp-form-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 25px;
+}
+
+.mp-cancel-button {
+  border: 1px solid #ddd6fe;
+  background: #fff;
+  color: #514762;
+}
+
+.mp-footer {
+  max-width: 1180px;
+  margin: 28px auto 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+  color: #716783;
+  font-size: 13px;
+}
+
+.mp-footer a {
+  color: #6d28d9;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 850px) {
+  .mp-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-sidebar {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .mp-page {
+    padding: 24px 4%;
+  }
+
+  .mp-sidebar,
+  .mp-content {
+    padding: 19px;
+  }
+
+  .mp-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-content-heading h2 {
+    font-size: 21px;
+  }
+}
+
+/* =================================
+   WOWMARRIAGE LIGHT PURPLE THEME
+================================= */
+
+:root {
+  --primary: #8B5CF6;
+  --primary-hover: #6D28D9;
+  --heading-color: #4C1D95;
+  --background: #F8F5FF;
+  --section-background: #EDE5FF;
+  --card-background: #FFFFFF;
+  --text-color: #30264a;
+  --border-color: #DDD6FE;
+}
+
+/* Global styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--heading-color);
+}
+
+/* Navbar */
+nav {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Buttons */
+button,
+.btn {
+  background-color: var(--primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover,
+.btn:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Cards */
+.card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(109, 40, 217, 0.08);
+}
+
+/* Inputs */
+input,
+select,
+textarea {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+/* Soft purple sections */
+.purple-section {
+  background-color: var(--section-background);
+}
+
+/* Links */
+a {
+  color: var(--primary);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
