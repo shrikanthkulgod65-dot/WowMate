@@ -1,0 +1,9 @@
+
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://wowmate-backend.vercel.app/api/$1"
+    }
+  ]
+}
