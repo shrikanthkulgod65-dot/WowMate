@@ -1,4 +1,3 @@
-
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
@@ -53,7 +52,6 @@ async function createAccount(req, res, forcedRole = null) {
       });
     }
 
-    // Corrected email validation regex
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
@@ -110,9 +108,7 @@ async function createAccount(req, res, forcedRole = null) {
     }
 
     if (normalizedMobile) {
-      const mobileExists = await User.findOne({
-        mobile: normalizedMobile,
-      });
+      const mobileExists = await User.findOne({ mobile: normalizedMobile });
 
       if (mobileExists) {
         return res.status(409).json({
@@ -143,6 +139,7 @@ async function createAccount(req, res, forcedRole = null) {
     }
 
     const user = await User.create(userData);
+    const token = createToken(user._id);
 
     return res.status(201).json({
       success: true,
@@ -150,6 +147,7 @@ async function createAccount(req, res, forcedRole = null) {
         role === "broker"
           ? "Broker account created successfully."
           : "Account created successfully.",
+      token,
       user: publicUser(user),
     });
   } catch (error) {

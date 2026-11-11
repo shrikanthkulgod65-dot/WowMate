@@ -30,7 +30,7 @@
 /* Website logo */
 .navbar-logo-image {
   display: block;
-  width: 150px;
+  width: 175px;
   height: 60px;
   object-fit: contain;
   flex-shrink: 0;
@@ -161,7 +161,7 @@
 
   /* Logo size for smaller screens */
   .navbar-logo-image {
-    width: 125px;
+    width: 145px;
     height: 52px;
   }
 }
@@ -178,11 +178,13 @@
   }
 
   .navbar-menu-toggle {
-    display: grid;
-    flex: 0 0 43px;
-    width: 43px;
-    height: 43px;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    padding: 0;
     border: 1px solid #ddd6fe;
     border-radius: 9px;
     background: #fff;

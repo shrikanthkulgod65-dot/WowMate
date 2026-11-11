@@ -5,13 +5,18 @@ import {
   getMyProfile,
   updateMyProfile,
   discoverProfiles,
+  getPublicProfiles,
 } from "../controllers/profileController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// All profile routes require authentication.
+// PUBLIC ROUTE - no login required.
+// Visitors can see only names and profile photos.
+router.get("/public", getPublicProfiles);
+
+// All existing routes require authentication.
 router.use(authMiddleware);
 
 // Get logged-in user's profile.

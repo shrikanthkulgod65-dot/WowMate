@@ -676,8 +676,20 @@ export default function Register() {
         return;
       }
 
-      setSuccess(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Registration now returns a JWT. Save it so the new member is signed in.
+      if (!result.token) {
+        throw new Error(
+          "Your account was created, but the login token was not returned. Please log in."
+        );
+      }
+
+      localStorage.setItem("token", result.token);
+      if (result.user) {
+        localStorage.setItem("user", JSON.stringify(result.user));
+      }
+
+      // Matrimony members go straight to Discover Profiles after registration.
+      navigate("/discover-profiles", { replace: true });
     } catch (err) {
       setError(
         err instanceof Error
@@ -2278,6 +2290,63 @@ export default function Register() {
 
         }
 
+
+        /* WowMate light-lavender visual refresh */
+        .as-register {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 8% 12%, rgba(196,181,253,.48), transparent 29%),
+            radial-gradient(circle at 92% 82%, rgba(221,214,254,.72), transparent 32%),
+            linear-gradient(135deg, #faf8ff 0%, #f1edff 52%, #fbfaff 100%);
+        }
+        .as-register::before, .as-register::after {
+          content: "";
+          position: fixed;
+          z-index: -1;
+          width: 260px;
+          height: 260px;
+          border-radius: 50%;
+          pointer-events: none;
+          filter: blur(1px);
+          background: rgba(167,139,250,.13);
+          animation: asRegisterPageFloat 11s ease-in-out infinite;
+        }
+        .as-register::before { top: 14%; left: -115px; }
+        .as-register::after { right: -125px; bottom: 8%; width: 320px; height: 320px; animation-delay: -5s; }
+        @keyframes asRegisterPageFloat {
+          0%,100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(18px,-22px,0) scale(1.06); }
+        }
+        .as-register-layout, .as-register-header { position: relative; z-index: 1; }
+        .as-register-sidebar {
+          background: linear-gradient(145deg, #a78bfa 0%, #8b5cf6 55%, #6d28d9 100%);
+          box-shadow: 0 22px 55px rgba(109,40,217,.18);
+        }
+        .as-register-card {
+          border-color: #e5defd;
+          box-shadow: 0 20px 60px rgba(91,64,150,.10);
+          backdrop-filter: blur(10px);
+        }
+        .as-register-btn.primary {
+          border-color: #8b5cf6;
+          background: linear-gradient(115deg, #a78bfa, #7c3aed);
+          box-shadow: 0 9px 22px rgba(124,58,237,.20);
+        }
+        .as-register-btn.primary:hover { background: linear-gradient(115deg, #8b5cf6, #6d28d9); }
+        .as-register .register-input:focus { border-color: #9b7aea; box-shadow: 0 0 0 4px rgba(139,92,246,.12); }
+        .as-register-step-track { background: #eee9fc; }
+        .as-register-step-track span { background: linear-gradient(90deg,#c4b5fd,#7c3aed); }
+        .as-register-option input:checked + label,
+        .as-register-account-option input:checked + label,
+        .as-register-interest.selected { background: #f3efff; border-color: #9b7aea; color: #6d28d9; }
+        .as-register-section-icon { background: #f0ebff; color: #7c3aed; }
+        .as-register-benefit-icon { background: rgba(255,255,255,.2); }
+        @media (prefers-reduced-motion: reduce) {
+          .as-register::before, .as-register::after { animation: none !important; }
+        }
+
       `}</style>
 
 
@@ -3521,17 +3590,17 @@ export default function Register() {
 
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", marginTop: "18px" }}>
                         {userPhotos.map((photo, index) => (
-                          <div key={photo.id} style={{ position: "relative", width: "110px", height: "110px" }}>
+                          <div key={photo.id} style={{ position: "relative", width: "110px", height: "110px", flex: "0 0 110px", overflow: "visible" }}>
                             <img
                               src={photo.preview}
                               alt={`Your profile photo ${index + 1}`}
-                              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px", border: "1px solid #eadde3" }}
+                              style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px", border: "1px solid #eadde3" }}
                             />
                             <button
                               type="button"
                               onClick={() => removeUserPhoto(photo.id)}
                               aria-label={`Remove photo ${index + 1}`}
-                              style={{ position: "absolute", top: "-8px", right: "-8px", width: "26px", height: "26px", border: "none", borderRadius: "50%", background: "#6d28d9", color: "#fff", fontSize: "19px", cursor: "pointer" }}
+                              style={{ position: "absolute", top: "-8px", right: "-8px", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", minWidth: "30px", minHeight: "30px", padding: 0, margin: 0, boxSizing: "border-box", border: "none", borderRadius: "50%", background: "#6d28d9", color: "#fff", fontSize: "20px", fontWeight: 600, lineHeight: 1, textAlign: "center", cursor: "pointer", appearance: "none" }}
                             >
                               ×
                             </button>

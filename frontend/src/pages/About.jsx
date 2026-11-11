@@ -195,7 +195,7 @@ export default function About() {
         }
 
         .about-btn:hover {
-          background: #6e193f;
+          background: #e8dfe3;
           color: #ffffff;
           transform: translateY(-2px);
         }
@@ -353,16 +353,21 @@ export default function About() {
         .about-story-image {
           min-height: 150px;
           overflow: hidden;
-          border-radius: -20px;
-          background: #f5dce6;
+          border-radius: 0;
+          background: transparent;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .about-story-image img {
           display: block;
-          width: 110%;
-          height: 150%;
-          min-height: 90px;
-          object-fit: cover;
+          width: 100%;
+          max-width: 650px;
+          height: auto;
+          min-height: 0;
+          object-fit: contain;
+          background: transparent;
         }
 
         /* VALUES */
@@ -492,7 +497,7 @@ export default function About() {
           background: linear-gradient(
             90deg,
             #8b5cf6,
-            #d66c98
+            #c8799a
           );
           content: "";
         }
@@ -587,7 +592,7 @@ export default function About() {
         .about-developer-number {
           display: block;
           margin-bottom: 4px;
-          color: #b83d70;
+          color: #f2edef;
           font-size: 11px;
           font-weight: 800;
           letter-spacing: 1.5px;
@@ -787,9 +792,12 @@ export default function About() {
             grid-template-columns: 1fr;
           }
 
-          .about-story-image,
-          .about-story-image img {
+          .about-story-image {
             min-height: 280px;
+          }
+
+          .about-story-image img {
+            min-height: 0;
           }
 
           .about-team-intro {
@@ -897,8 +905,8 @@ export default function About() {
 
           <div className="about-story-image">
             <img
-              src="image.png"
-              alt="Wedding celebration and floral decorations"
+              src="/image.png"
+              alt="WowMate Logo"
               loading="lazy"
             />
           </div>

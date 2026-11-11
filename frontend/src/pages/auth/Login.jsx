@@ -1,1565 +1,1543 @@
-
-
 import { useEffect, useState } from "react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
 
-  Mail,
+Mail,
 
-  LockKeyhole,
+LockKeyhole,
 
-  Eye,
+Eye,
 
-  EyeOff,
+EyeOff,
 
-  ArrowRight,
+ArrowRight,
 
-  ShieldCheck,
+ShieldCheck,
 
-  HeartHandshake,
+HeartHandshake,
 
-  Sparkles,
+Sparkles,
 
-  Users,
+Users,
 
-  AlertCircle,
+AlertCircle,
 
 } from "lucide-react";
 
-
-
 const CURRENT_YEAR = new Date().getFullYear();
-
-
 
 export default function Login() {
 
-  const navigate = useNavigate();
+const navigate = useNavigate();
 
+const location = useLocation();
 
-
-  
-  const location = useLocation();
 const [formData, setFormData] = useState({
 
-    emailOrMobile: new URLSearchParams(location.search).get("identifier") || "",
+emailOrMobile: new URLSearchParams(location.search).get("identifier") || "",
 
-    password: "",
+password: "",
 
-    rememberMe: true,
+rememberMe: true,
 
-  });
+});
 
+useEffect(() => {
 
+const identifier = new URLSearchParams(location.search).get("identifier");
 
-  
-  useEffect(() => {
-    const identifier = new URLSearchParams(location.search).get("identifier");
-    if (identifier) setFormData((previous) => ({ ...previous, emailOrMobile: identifier }));
-  }, [location.search]);
+if (identifier) setFormData((previous) => ({ ...previous, emailOrMobile: identifier }));
+
+}, [location.search]);
+
 const [showPassword, setShowPassword] = useState(false);
 
-  const [error, setError] = useState("");
+const [error, setError] = useState("");
 
-  const [loading, setLoading] = useState(false);
+const [loading, setLoading] = useState(false);
 
+const handleChange = (event) => {
 
+const { name, value, type, checked } = event.target;
 
-  const handleChange = (event) => {
+setFormData((previous) => ({
 
-    const { name, value, type, checked } = event.target;
+...previous,
 
+[name]: type === "checkbox" ? checked : value,
 
+}));
 
-    setFormData((previous) => ({
+setError("");
 
-      ...previous,
+};
 
-      [name]: type === "checkbox" ? checked : value,
+const handleSubmit = async (event) => {
 
-    }));
+event.preventDefault();
 
+setError("");
 
+const identifier = formData.emailOrMobile.trim();
 
-    setError("");
+const password = formData.password;
 
-  };
+if (!identifier || !password) {
 
+setError("Please enter your email address and password.");
 
+return;
 
-  const handleSubmit = async (event) => {
+}
 
-    event.preventDefault();
+const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
-    setError("");
+const isMobile = /^\+?[0-9\s()-]{10,18}$/.test(identifier);
 
+if (!isEmail && !isMobile) {
 
+setError("Please enter a valid email address.");
 
-    const identifier = formData.emailOrMobile.trim();
+return;
 
-    const password = formData.password;
+}
 
-
-
-    if (!identifier || !password) {
-
-      setError("Please enter your email address and password.");
-
-      return;
-
-    }
-
-
-
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-
-    const isMobile = /^\+?[0-9\s()-]{10,18}$/.test(identifier);
-
-
-
-    if (!isEmail && !isMobile) {
-
-      setError("Please enter a valid email address.");
-
-      return;
-
-    }
 setLoading(true);
 
+try {
 
+const response = await fetch(
 
-    try {
+"http://localhost:5000/api/auth/login",
 
-      const response = await fetch(
+{
 
-        "http://localhost:5000/api/auth/login",
+method: "POST",
 
-        {
+headers: {
 
-          method: "POST",
+"Content-Type": "application/json",
 
-          headers: {
+},
 
-            "Content-Type": "application/json",
+body: JSON.stringify({
 
-          },
+emailOrMobile: identifier,
 
-          body: JSON.stringify({
+password,
 
-            emailOrMobile: identifier,
+}),
 
-            password,
+}
 
-          }),
+);
 
-        }
+const data = await response.json();
 
-      );
+if (!response.ok) {
 
+throw new Error(
 
+data.message || data.error || "Login failed. Please try again."
 
-      const data = await response.json();
+);
 
+}
 
+if (!data.token) {
 
-      if (!response.ok) {
+throw new Error("Login succeeded, but the server did not return a token.");
 
-        throw new Error(
+}
 
-          data.message || data.error || "Login failed. Please try again."
+// Clear any previous login session.
 
-        );
+localStorage.removeItem("token");
 
-      }
+localStorage.removeItem("user");
 
+sessionStorage.removeItem("token");
 
+sessionStorage.removeItem("user");
 
-      if (!data.token) {
+// Save the session according to the Remember Me option.
 
-        throw new Error("Login succeeded, but the server did not return a token.");
+const storage = formData.rememberMe ? localStorage : sessionStorage;
 
-      }
+storage.setItem("token", data.token);
 
+if (data.user) {
 
+storage.setItem("user", JSON.stringify(data.user));
 
-      // Clear any previous login session.
+}
 
-      localStorage.removeItem("token");
+// Notify the Navbar and other components that login status changed.
 
-      localStorage.removeItem("user");
+window.dispatchEvent(new Event("authChanged"));
 
-      sessionStorage.removeItem("token");
+// Brokers go to Broker Services; regular members keep the normal home redirect.
 
-      sessionStorage.removeItem("user");
+if (String(data.user?.role || "").toLowerCase() === "broker") {
 
+navigate("/broker-matrimony", { replace: true });
 
+} else {
 
-      // Save the session according to the Remember Me option.
+navigate("/", { replace: true });
 
-      const storage = formData.rememberMe ? localStorage : sessionStorage;
+}
 
+} catch (err) {
 
+setError(
 
-      storage.setItem("token", data.token);
+err.message ||
 
+"Unable to connect to the server. Please check that your backend is running."
 
+);
 
-      if (data.user) {
+} finally {
 
-        storage.setItem("user", JSON.stringify(data.user));
+setLoading(false);
 
-      }
+}
 
+};
 
+return (
 
-      // Notify the Navbar and other components that login status changed.
+<div className="as-login">
 
-      window.dispatchEvent(new Event("authChanged"));
+<style>{`
 
+.as-login {
 
+min-height: 100vh;
 
-      // Brokers go to Broker Services; regular members keep the normal home redirect.
-      if (String(data.user?.role || "").toLowerCase() === "broker") {
-        navigate("/broker-matrimony", { replace: true });
-      } else {
-        navigate("/", { replace: true });
-      }
+background: #fff8f6;
 
-    } catch (err) {
+color: #302326;
 
-      setError(
+font-family: Arial, Helvetica, sans-serif;
 
-        err.message ||
+}
 
-          "Unable to connect to the server. Please check that your backend is running."
+.as-login * {
 
-      );
+box-sizing: border-box;
 
-    } finally {
+}
 
-      setLoading(false);
+.as-login-header {
 
-    }
+min-height: 76px;
 
-  };
+padding: 16px 7%;
 
+display: flex;
 
+align-items: center;
 
-  return (
+justify-content: space-between;
 
-    <div className="as-login">
+background: #ffffff;
 
-      <style>{`
+border-bottom: 1px solid #f4e7e5;
 
-        .as-login {
+}
 
-          min-height: 100vh;
+.as-login-logo {
 
-          background: #fff8f6;
+display: inline-flex;
 
-          color: #302326;
+align-items: center;
 
-          font-family: Arial, Helvetica, sans-serif;
+gap: 10px;
 
-        }
+color: #a51d46;
 
+text-decoration: none;
 
+font-size: 25px;
 
-        .as-login \* {
+font-weight: 800;
 
-          box-sizing: border-box;
+letter-spacing: -0.7px;
 
-        }
+}
 
+.as-login-logo-image {
 
+width: 155px;
 
-        .as-login-header {
+height: 55px;
 
-          min-height: 76px;
+display: block;
 
-          padding: 16px 7%;
+object-fit: contain;
 
-          display: flex;
+background: transparent;
 
-          align-items: center;
+}
 
-          justify-content: space-between;
 
-          background: #ffffff;
 
-          border-bottom: 1px solid #f4e7e5;
+.as-login-logo-icon {
 
-        }
+display: flex;
 
+align-items: center;
 
+justify-content: center;
 
-        .as-login-logo {
+width: 40px;
 
-          display: inline-flex;
+height: 40px;
 
-          align-items: center;
+border-radius: 13px;
 
-          gap: 10px;
+background: #a51d46;
 
-          color: #a51d46;
+color: white;
 
-          text-decoration: none;
+}
 
-          font-size: 25px;
+.as-login-header-right {
 
-          font-weight: 800;
+display: flex;
 
-          letter-spacing: -0.7px;
+align-items: center;
 
-        }
+gap: 8px;
 
+font-size: 14px;
 
+color: #6e5c61;
 
-        .as-login-logo-icon {
+}
 
-          display: flex;
+.as-login-header-right a {
 
-          align-items: center;
+color: #a51d46;
 
-          justify-content: center;
+font-weight: 700;
 
-          width: 40px;
+text-decoration: none;
 
-          height: 40px;
+}
 
-          border-radius: 13px;
+.as-login-layout {
 
-          background: #a51d46;
+display: grid;
 
-          color: white;
+grid-template-columns: 1fr 0.85fr;
 
-        }
+max-width: 1200px;
 
+min-height: calc(100vh - 135px);
 
+margin: 0 auto;
 
-        .as-login-header-right {
+padding: 45px 35px;
 
-          display: flex;
+gap: 65px;
 
-          align-items: center;
+align-items: center;
 
-          gap: 8px;
+}
 
-          font-size: 14px;
+.as-login-hero {
 
-          color: #6e5c61;
+position: relative;
 
-        }
+padding: 20px 0;
 
+}
 
+.as-login-badge {
 
-        .as-login-header-right a {
+display: inline-flex;
 
-          color: #a51d46;
+align-items: center;
 
-          font-weight: 700;
+gap: 8px;
 
-          text-decoration: none;
+padding: 9px 15px;
 
-        }
+border-radius: 30px;
 
+background: #fbe5ec;
 
+color: #a51d46;
 
-        .as-login-layout {
+font-size: 13px;
 
-          display: grid;
+font-weight: 700;
 
-          grid-template-columns: 1fr 0.85fr;
+margin-bottom: 25px;
 
-          max-width: 1200px;
+}
 
-          min-height: calc(100vh - 135px);
+.as-login-hero h1 {
 
-          margin: 0 auto;
+max-width: 540px;
 
-          padding: 45px 35px;
+margin: 0 0 20px;
 
-          gap: 65px;
+font-size: clamp(36px, 4.5vw, 58px);
 
-          align-items: center;
+line-height: 1.12;
 
-        }
+letter-spacing: -1.8px;
 
+color: #342126;
 
+}
 
-        .as-login-hero {
+.as-login-hero h1 span {
 
-          position: relative;
+color: #b32752;
 
-          padding: 20px 0;
+}
 
-        }
+.as-login-hero > p {
 
+max-width: 490px;
 
+margin: 0;
 
-        .as-login-badge {
+color: #79676c;
 
-          display: inline-flex;
+font-size: 16px;
 
-          align-items: center;
+line-height: 1.8;
 
-          gap: 8px;
+}
 
-          padding: 9px 15px;
+.as-login-benefits {
 
-          border-radius: 30px;
+display: grid;
 
-          background: #fbe5ec;
+gap: 18px;
 
-          color: #a51d46;
+margin-top: 35px;
 
-          font-size: 13px;
+}
 
-          font-weight: 700;
+.as-login-benefit {
 
-          margin-bottom: 25px;
+display: flex;
 
-        }
+align-items: center;
 
+gap: 13px;
 
+color: #554349;
 
-        .as-login-hero h1 {
+font-size: 14px;
 
-          max-width: 540px;
+}
 
-          margin: 0 0 20px;
+.as-login-benefit-icon {
 
-          font-size: clamp(36px, 4.5vw, 58px);
+display: flex;
 
-          line-height: 1.12;
+align-items: center;
 
-          letter-spacing: -1.8px;
+justify-content: center;
 
-          color: #342126;
+flex-shrink: 0;
 
-        }
+width: 42px;
 
+height: 42px;
 
+border-radius: 13px;
 
-        .as-login-hero h1 span {
+color: #a51d46;
 
-          color: #b32752;
+background: #fbe5ec;
 
-        }
+}
 
+.as-login-benefit strong {
 
+display: block;
 
-        .as-login-hero > p {
+margin-bottom: 4px;
 
-          max-width: 490px;
+color: #38262c;
 
-          margin: 0;
+}
 
-          color: #79676c;
+.as-login-card {
 
-          font-size: 16px;
+width: 100%;
 
-          line-height: 1.8;
+max-width: 450px;
 
-        }
+margin: 0 auto;
 
+padding: 36px;
 
+border: 1px solid #f1e2e4;
 
-        .as-login-benefits {
+border-radius: 22px;
 
-          display: grid;
+background: #ffffff;
 
-          gap: 18px;
+box-shadow: 0 18px 60px rgba(106, 39, 59, 0.08);
 
-          margin-top: 35px;
+}
 
-        }
+.as-login-card-icon {
 
+display: flex;
 
+align-items: center;
 
-        .as-login-benefit {
+justify-content: center;
 
-          display: flex;
+width: 52px;
 
-          align-items: center;
+height: 52px;
 
-          gap: 13px;
+margin-bottom: 22px;
 
-          color: #554349;
+border-radius: 16px;
 
-          font-size: 14px;
+color: #a51d46;
 
-        }
+background: #fbe5ec;
 
+}
 
+.as-login-card h2 {
 
-        .as-login-benefit-icon {
+margin: 0 0 9px;
 
-          display: flex;
+font-size: 28px;
 
-          align-items: center;
+color: #342126;
 
-          justify-content: center;
+letter-spacing: -0.5px;
 
-          flex-shrink: 0;
+}
 
-          width: 42px;
+.as-login-card-description {
 
-          height: 42px;
+margin: 0 0 27px;
 
-          border-radius: 13px;
+color: #806d73;
 
-          color: #a51d46;
+font-size: 14px;
 
-          background: #fbe5ec;
+line-height: 1.6;
 
-        }
+}
 
+.as-login-error {
 
+display: flex;
 
-        .as-login-benefit strong {
+align-items: flex-start;
 
-          display: block;
+gap: 9px;
 
-          margin-bottom: 4px;
+padding: 12px;
 
-          color: #38262c;
+margin-bottom: 19px;
 
-        }
+border: 1px solid #f2c5cb;
 
+border-radius: 10px;
 
+background: #fff0f1;
 
-        .as-login-card {
+color: #a32335;
 
-          width: 100%;
+font-size: 13px;
 
-          max-width: 450px;
+line-height: 1.5;
 
-          margin: 0 auto;
+}
 
-          padding: 36px;
+.as-login-error svg {
 
-          border: 1px solid #f1e2e4;
+flex-shrink: 0;
 
-          border-radius: 22px;
+margin-top: 1px;
 
-          background: #ffffff;
+}
 
-          box-shadow: 0 18px 60px rgba(106, 39, 59, 0.08);
+.as-login-field {
 
-        }
+margin-bottom: 19px;
 
+}
 
+.as-login-field label {
 
-        .as-login-card-icon {
+display: block;
 
-          display: flex;
+margin-bottom: 9px;
 
-          align-items: center;
+color: #47343a;
 
-          justify-content: center;
+font-size: 13px;
 
-          width: 52px;
+font-weight: 700;
 
-          height: 52px;
+}
 
-          margin-bottom: 22px;
+.as-login-input-wrap {
 
-          border-radius: 16px;
+display: flex;
 
-          color: #a51d46;
+align-items: center;
 
-          background: #fbe5ec;
+gap: 11px;
 
-        }
+min-height: 49px;
 
+padding: 0 14px;
 
+border: 1px solid #e8dadd;
 
-        .as-login-card h2 {
+border-radius: 10px;
 
-          margin: 0 0 9px;
+background: #fff;
 
-          font-size: 28px;
+color: #a08c92;
 
-          color: #342126;
+transition: border-color 0.2s, box-shadow 0.2s;
 
-          letter-spacing: -0.5px;
+}
 
-        }
+.as-login-input-wrap:focus-within {
 
+border-color: #b32752;
 
+box-shadow: 0 0 0 3px rgba(179, 39, 82, 0.09);
 
-        .as-login-card-description {
+}
 
-          margin: 0 0 27px;
+.as-login-input-wrap input {
 
-          color: #806d73;
+width: 100%;
 
-          font-size: 14px;
+min-width: 0;
 
-          line-height: 1.6;
+border: 0;
 
-        }
+outline: none;
 
+background: transparent;
 
+color: #342126;
 
-        .as-login-error {
+font: inherit;
 
-          display: flex;
+font-size: 14px;
 
-          align-items: flex-start;
+}
 
-          gap: 9px;
+.as-login-input-wrap input::placeholder {
 
-          padding: 12px;
+color: #b5a5aa;
 
-          margin-bottom: 19px;
+}
 
-          border: 1px solid #f2c5cb;
+.as-login-password-toggle {
 
-          border-radius: 10px;
+display: flex;
 
-          background: #fff0f1;
+align-items: center;
 
-          color: #a32335;
+justify-content: center;
 
-          font-size: 13px;
+padding: 3px;
 
-          line-height: 1.5;
+border: 0;
 
-        }
+background: transparent;
 
+color: #927d84;
 
+cursor: pointer;
 
-        .as-login-error svg {
+}
 
-          flex-shrink: 0;
+.as-login-options {
 
-          margin-top: 1px;
+display: flex;
 
-        }
+align-items: center;
 
+justify-content: space-between;
 
+gap: 12px;
 
-        .as-login-field {
+margin: 3px 0 23px;
 
-          margin-bottom: 19px;
+font-size: 12px;
 
-        }
+}
 
+.as-login-remember {
 
+display: flex;
 
-        .as-login-field label {
+align-items: center;
 
-          display: block;
+gap: 7px;
 
-          margin-bottom: 9px;
+color: #78666c;
 
-          color: #47343a;
+cursor: pointer;
 
-          font-size: 13px;
+}
 
-          font-weight: 700;
+.as-login-remember input {
 
-        }
+accent-color: #a51d46;
 
+}
 
+.as-login-options a,
 
-        .as-login-input-wrap {
+.as-login-signup a {
 
-          display: flex;
+color: #a51d46;
 
-          align-items: center;
+font-weight: 700;
 
-          gap: 11px;
+text-decoration: none;
 
-          min-height: 49px;
+}
 
-          padding: 0 14px;
+.as-login-submit {
 
-          border: 1px solid #e8dadd;
+display: flex;
 
-          border-radius: 10px;
+align-items: center;
 
-          background: #fff;
+justify-content: center;
 
-          color: #a08c92;
+gap: 10px;
 
-          transition: border-color 0.2s, box-shadow 0.2s;
+width: 100%;
 
-        }
+min-height: 50px;
 
+padding: 13px 18px;
 
+border: 0;
 
-        .as-login-input-wrap:focus-within {
+border-radius: 11px;
 
-          border-color: #b32752;
+background: #a51d46;
 
-          box-shadow: 0 0 0 3px rgba(179, 39, 82, 0.09);
+color: #ffffff;
 
-        }
+font-size: 14px;
 
+font-weight: 700;
 
+cursor: pointer;
 
-        .as-login-input-wrap input {
+transition: background 0.2s, transform 0.2s;
 
-          width: 100%;
+}
 
-          min-width: 0;
+.as-login-submit:hover:not(:disabled) {
 
-          border: 0;
+background: #851536;
 
-          outline: none;
+transform: translateY(-1px);
 
-          background: transparent;
+}
 
-          color: #342126;
+.as-login-submit:disabled {
 
-          font: inherit;
+opacity: 0.7;
 
-          font-size: 14px;
+cursor: not-allowed;
 
-        }
+}
 
+.as-login-secure {
 
+display: flex;
 
-        .as-login-input-wrap input::placeholder {
+align-items: center;
 
-          color: #b5a5aa;
+justify-content: center;
 
-        }
+gap: 7px;
 
+margin: 20px 0 0;
 
+color: #9a888e;
 
-        .as-login-password-toggle {
+font-size: 11px;
 
-          display: flex;
+}
 
-          align-items: center;
+.as-login-divider {
 
-          justify-content: center;
+display: flex;
 
-          padding: 3px;
+align-items: center;
 
-          border: 0;
+gap: 13px;
 
-          background: transparent;
+margin: 23px 0;
 
-          color: #927d84;
+color: #a39197;
 
-          cursor: pointer;
+font-size: 11px;
 
-        }
+}
 
+.as-login-divider::before,
 
+.as-login-divider::after {
 
-        .as-login-options {
+content: "";
 
-          display: flex;
+flex: 1;
 
-          align-items: center;
+height: 1px;
 
-          justify-content: space-between;
+background: #f0e5e7;
 
-          gap: 12px;
+}
 
-          margin: 3px 0 23px;
+.as-login-signup {
 
-          font-size: 12px;
+margin: 0;
 
-        }
+text-align: center;
 
+color: #806d73;
 
+font-size: 13px;
 
-        .as-login-remember {
+}
 
-          display: flex;
+.as-login-footer {
 
-          align-items: center;
+display: flex;
 
-          gap: 7px;
+align-items: center;
 
-          color: #78666c;
+justify-content: space-between;
 
-          cursor: pointer;
+gap: 15px;
 
-        }
+padding: 22px 7%;
 
+border-top: 1px solid #f4e7e5;
 
+background: #ffffff;
 
-        .as-login-remember input {
+color: #98858b;
 
-          accent-color: #a51d46;
+font-size: 11px;
 
-        }
+}
 
+.as-login-footer-links {
 
+display: flex;
 
-        .as-login-options a,
+gap: 18px;
 
-        .as-login-signup a {
+}
 
-          color: #a51d46;
+.as-login-footer a {
 
-          font-weight: 700;
+color: #806d73;
 
-          text-decoration: none;
+text-decoration: none;
 
-        }
+}
 
+/* Added motion effects only; existing login behavior and layout remain intact. */
 
+@keyframes asLoginFadeUp {
 
-        .as-login-submit {
+from { opacity: 0; transform: translateY(22px); }
 
-          display: flex;
+to { opacity: 1; transform: translateY(0); }
 
-          align-items: center;
+}
 
-          justify-content: center;
+@keyframes asLoginFadeIn {
 
-          gap: 10px;
+from { opacity: 0; }
 
-          width: 100%;
+to { opacity: 1; }
 
-          min-height: 50px;
+}
 
-          padding: 13px 18px;
+@keyframes asLoginSoftFloat {
 
-          border: 0;
+0%, 100% { transform: translateY(0); }
 
-          border-radius: 11px;
+50% { transform: translateY(-5px); }
 
-          background: #a51d46;
+}
 
-          color: #ffffff;
+.as-login-header {
 
-          font-size: 14px;
+animation: asLoginFadeIn 650ms ease both;
 
-          font-weight: 700;
+}
 
-          cursor: pointer;
+.as-login-hero {
 
-          transition: background 0.2s, transform 0.2s;
+animation: asLoginFadeUp 750ms cubic-bezier(.2,.7,.2,1) both;
 
-        }
+}
 
+.as-login-badge {
 
+animation: asLoginFadeUp 650ms ease 100ms both;
 
-        .as-login-submit:hover:not(:disabled) {
+}
 
-          background: #851536;
+.as-login-hero h1 {
 
-          transform: translateY(-1px);
+animation: asLoginFadeUp 700ms ease 160ms both;
 
-        }
+}
 
+.as-login-hero > p {
 
+animation: asLoginFadeUp 700ms ease 230ms both;
 
-        .as-login-submit:disabled {
+}
 
-          opacity: 0.7;
+.as-login-benefit {
 
-          cursor: not-allowed;
+animation: asLoginFadeUp 600ms ease both;
 
-        }
+transition: transform 220ms ease;
 
+}
 
+.as-login-benefit:nth-child(2) { animation-delay: 120ms; }
 
-        .as-login-secure {
+.as-login-benefit:nth-child(3) { animation-delay: 220ms; }
 
-          display: flex;
+.as-login-benefit:hover { transform: translateX(5px); }
 
-          align-items: center;
+.as-login-benefit-icon {
 
-          justify-content: center;
+transition: transform 250ms ease, background 250ms ease;
 
-          gap: 7px;
+}
 
-          margin: 20px 0 0;
+.as-login-benefit:hover .as-login-benefit-icon {
 
-          color: #9a888e;
+transform: rotate(-5deg) scale(1.06);
 
-          font-size: 11px;
+background: #f7d4e0;
 
-        }
+}
 
+.as-login-card {
 
+animation: asLoginFadeUp 800ms cubic-bezier(.2,.7,.2,1) 100ms both;
 
-        .as-login-divider {
+transition: box-shadow 250ms ease, border-color 250ms ease;
 
-          display: flex;
+}
 
-          align-items: center;
+.as-login-card:hover {
 
-          gap: 13px;
+box-shadow: 0 22px 68px rgba(106, 39, 59, 0.12);
 
-          margin: 23px 0;
+border-color: #ebcbd4;
 
-          color: #a39197;
+}
 
-          font-size: 11px;
+.as-login-card-icon {
 
-        }
+animation: asLoginSoftFloat 3.8s ease-in-out 1s infinite;
 
+}
 
+.as-login-input-wrap {
 
-        .as-login-divider::before,
+transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 
-        .as-login-divider::after {
+}
 
-          content: "";
+.as-login-input-wrap:focus-within {
 
-          flex: 1;
+transform: translateY(-1px);
 
-          height: 1px;
+}
 
-          background: #f0e5e7;
+.as-login-submit {
 
-        }
+position: relative;
 
+overflow: hidden;
 
+}
 
-        .as-login-signup {
+.as-login-submit::after {
 
-          margin: 0;
+content: "";
 
-          text-align: center;
+position: absolute;
 
-          color: #806d73;
+top: -60%;
 
-          font-size: 13px;
+left: -80%;
 
-        }
+width: 45%;
 
+height: 220%;
 
+transform: rotate(22deg);
 
-        .as-login-footer {
+background: rgba(255,255,255,.18);
 
-          display: flex;
+transition: left 500ms ease;
 
-          align-items: center;
+pointer-events: none;
 
-          justify-content: space-between;
+}
 
-          gap: 15px;
+.as-login-submit:hover:not(:disabled)::after { left: 140%; }
 
-          padding: 22px 7%;
+.as-login-logo-icon {
 
-          border-top: 1px solid #f4e7e5;
+transition: transform 250ms ease, border-radius 250ms ease;
 
-          background: #ffffff;
+}
 
-          color: #98858b;
+.as-login-logo:hover .as-login-logo-icon {
 
-          font-size: 11px;
+transform: rotate(-7deg) scale(1.05);
 
-        }
+border-radius: 50%;
 
+}
 
+.as-login a {
 
-        .as-login-footer-links {
+transition: color 180ms ease;
 
-          display: flex;
+}
 
-          gap: 18px;
+@media (prefers-reduced-motion: reduce) {
 
-        }
+.as-login \\\*,
 
+.as-login \\\*::before,
 
+.as-login \\\*::after {
 
-        .as-login-footer a {
+animation-duration: 0.01ms !important;
 
-          color: #806d73;
+animation-iteration-count: 1 !important;
 
-          text-decoration: none;
+scroll-behavior: auto !important;
 
-        }
+transition-duration: 0.01ms !important;
 
+}
 
+}
 
-        /* Added motion effects only; existing login behavior and layout remain intact. */
-        @keyframes asLoginFadeUp {
-          from { opacity: 0; transform: translateY(22px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes asLoginFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes asLoginSoftFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-        .as-login-header {
-          animation: asLoginFadeIn 650ms ease both;
-        }
-        .as-login-hero {
-          animation: asLoginFadeUp 750ms cubic-bezier(.2,.7,.2,1) both;
-        }
-        .as-login-badge {
-          animation: asLoginFadeUp 650ms ease 100ms both;
-        }
-        .as-login-hero h1 {
-          animation: asLoginFadeUp 700ms ease 160ms both;
-        }
-        .as-login-hero > p {
-          animation: asLoginFadeUp 700ms ease 230ms both;
-        }
-        .as-login-benefit {
-          animation: asLoginFadeUp 600ms ease both;
-          transition: transform 220ms ease;
-        }
-        .as-login-benefit:nth-child(2) { animation-delay: 120ms; }
-        .as-login-benefit:nth-child(3) { animation-delay: 220ms; }
-        .as-login-benefit:hover { transform: translateX(5px); }
-        .as-login-benefit-icon {
-          transition: transform 250ms ease, background 250ms ease;
-        }
-        .as-login-benefit:hover .as-login-benefit-icon {
-          transform: rotate(-5deg) scale(1.06);
-          background: #f7d4e0;
-        }
-        .as-login-card {
-          animation: asLoginFadeUp 800ms cubic-bezier(.2,.7,.2,1) 100ms both;
-          transition: box-shadow 250ms ease, border-color 250ms ease;
-        }
-        .as-login-card:hover {
-          box-shadow: 0 22px 68px rgba(106, 39, 59, 0.12);
-          border-color: #ebcbd4;
-        }
-        .as-login-card-icon {
-          animation: asLoginSoftFloat 3.8s ease-in-out 1s infinite;
-        }
-        .as-login-input-wrap {
-          transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
-        }
-        .as-login-input-wrap:focus-within {
-          transform: translateY(-1px);
-        }
-        .as-login-submit {
-          position: relative;
-          overflow: hidden;
-        }
-        .as-login-submit::after {
-          content: "";
-          position: absolute;
-          top: -60%;
-          left: -80%;
-          width: 45%;
-          height: 220%;
-          transform: rotate(22deg);
-          background: rgba(255,255,255,.18);
-          transition: left 500ms ease;
-          pointer-events: none;
-        }
-        .as-login-submit:hover:not(:disabled)::after { left: 140%; }
-        .as-login-logo-icon {
-          transition: transform 250ms ease, border-radius 250ms ease;
-        }
-        .as-login-logo:hover .as-login-logo-icon {
-          transform: rotate(-7deg) scale(1.05);
-          border-radius: 50%;
-        }
-        .as-login a {
-          transition: color 180ms ease;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .as-login *,
-          .as-login *::before,
-          .as-login *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            scroll-behavior: auto !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
+@media (max-width: 850px) {
 
-        @media (max-width: 850px) {
+.as-login-layout {
 
-          .as-login-layout {
+grid-template-columns: 1fr;
 
-            grid-template-columns: 1fr;
+gap: 30px;
 
-            gap: 30px;
+padding: 35px 22px;
 
-            padding: 35px 22px;
+}
 
-          }
+.as-login-hero {
 
+text-align: center;
 
+}
 
-          .as-login-hero {
+.as-login-hero h1,
 
-            text-align: center;
+.as-login-hero > p {
 
-          }
+margin-left: auto;
 
+margin-right: auto;
 
+}
 
-          .as-login-hero h1,
+.as-login-benefits {
 
-          .as-login-hero > p {
+max-width: 430px;
 
-            margin-left: auto;
+margin: 25px auto 0;
 
-            margin-right: auto;
+text-align: left;
 
-          }
+}
 
+.as-login-card {
 
+max-width: 500px;
 
-          .as-login-benefits {
+}
 
-            max-width: 430px;
+}
 
-            margin: 25px auto 0;
+@media (max-width: 520px) {
 
-            text-align: left;
+.as-login-header {
 
-          }
+padding: 14px 18px;
 
+}
 
+.as-login-logo {
 
-          .as-login-card {
+font-size: 21px;
 
-            max-width: 500px;
+}
 
-          }
+.as-login-header-right {
 
-        }
+font-size: 12px;
 
+}
 
+.as-login-layout {
 
-        @media (max-width: 520px) {
+padding: 25px 16px;
 
-          .as-login-header {
+}
 
-            padding: 14px 18px;
+.as-login-hero h1 {
 
-          }
+font-size: 36px;
 
+}
 
+.as-login-card {
 
-          .as-login-logo {
+padding: 25px 20px;
 
-            font-size: 21px;
+border-radius: 17px;
 
-          }
+}
 
+.as-login-footer {
 
+flex-direction: column;
 
-          .as-login-header-right {
+text-align: center;
 
-            font-size: 12px;
+}
 
-          }
+}
 
+/* WowMate light-lavender visual refresh */
+.as-login {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(196,181,253,.50), transparent 30%),
+    radial-gradient(circle at 90% 78%, rgba(221,214,254,.70), transparent 34%),
+    linear-gradient(135deg, #faf8ff 0%, #f0ebff 55%, #fbfaff 100%);
+  color: #30264a;
+}
+.as-login::before, .as-login::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 270px;
+  height: 270px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(167,139,250,.15);
+  animation: asLoginAmbientFloat 12s ease-in-out infinite;
+}
+.as-login::before { top: 15%; left: -130px; }
+.as-login::after { right: -130px; bottom: 9%; width: 340px; height: 340px; animation-delay: -6s; }
+@keyframes asLoginAmbientFloat {
+  0%,100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(20px,-24px,0) scale(1.07); }
+}
+.as-login-header, .as-login-footer {
+  background: rgba(255,255,255,.82);
+  border-color: #e8e0fb;
+  backdrop-filter: blur(14px);
+}
+.as-login-logo, .as-login-header-right a, .as-login-options a,
+.as-login-signup a, .as-login-footer a { color: #7c3aed; }
+.as-login-badge, .as-login-benefit-icon, .as-login-card-icon {
+  background: #f0ebff;
+  color: #7c3aed;
+}
+.as-login-hero h1 { color: #30264a; }
+.as-login-hero h1 span { color: #7c3aed; }
+.as-login-hero > p, .as-login-header-right, .as-login-footer,
+.as-login-card-description, .as-login-signup { color: #716783; }
+.as-login-benefit { color: #51466a; }
+.as-login-benefit strong, .as-login-card h2 { color: #30264a; }
+.as-login-card {
+  border-color: #e5defd;
+  box-shadow: 0 22px 65px rgba(91,64,150,.12);
+  backdrop-filter: blur(12px);
+}
+.as-login-input-wrap { border-color: #ded6f4; }
+.as-login-input-wrap:focus-within {
+  border-color: #9b7aea;
+  box-shadow: 0 0 0 4px rgba(139,92,246,.13);
+}
+.as-login-remember input { accent-color: #7c3aed; }
+.as-login-submit {
+  background: linear-gradient(115deg, #a78bfa, #7c3aed);
+  box-shadow: 0 9px 22px rgba(124,58,237,.20);
+}
+.as-login-submit:hover:not(:disabled) { background: linear-gradient(115deg, #8b5cf6, #6d28d9); }
+.as-login-divider::before, .as-login-divider::after { background: #e8e0fb; }
+@media (prefers-reduced-motion: reduce) {
+  .as-login::before, .as-login::after { animation: none !important; }
+}
 
+`}</style>
 
-          .as-login-layout {
+<header className="as-login-header">
 
-            padding: 25px 16px;
+<Link to="/" className="as-login-logo" aria-label="WowMate home">
 
-          }
+<img
 
+src="/image.png"
 
+alt="WowMate Logo"
 
-          .as-login-hero h1 {
+className="as-login-logo-image"
 
-            font-size: 36px;
+/>
 
-          }
+</Link>
 
+<div className="as-login-header-right">
 
+New to WowMate?
 
-          .as-login-card {
+<Link to="/register">Create account</Link>
 
-            padding: 25px 20px;
+</div>
 
-            border-radius: 17px;
+</header>
 
-          }
+<main className="as-login-layout">
 
+<section className="as-login-hero">
 
+<div className="as-login-badge">
 
-          .as-login-footer {
+<Sparkles size={15} />
 
-            flex-direction: column;
+Your journey to forever starts here
 
-            text-align: center;
+</div>
 
-          }
+<h1>
 
-        }
+Find your
 
-      `}</style>
+<br />
 
+perfect <span>life partner.</span>
 
+</h1>
 
-      <header className="as-login-header">
+<p>
 
-        <Link to="/" className="as-login-logo">
+Welcome back to WowMate. Sign in to discover meaningful
 
-          <span className="as-login-logo-icon">
+connections, meet compatible people, and take the next step toward
 
-            <HeartHandshake size={23} />
+your happily ever after.
 
-          </span>
+</p>
 
-          WowMate
+<div className="as-login-benefits">
 
-        </Link>
+<div className="as-login-benefit">
 
+<div className="as-login-benefit-icon">
 
+<ShieldCheck size={20} />
 
-        <div className="as-login-header-right">
+</div>
 
-          New to WowMate?
+<div>
 
-          <Link to="/register">Create account</Link>
+<strong>Privacy you can trust</strong>
 
-        </div>
+Your information matters to us.
 
-      </header>
+</div>
 
+</div>
 
+<div className="as-login-benefit">
 
-      <main className="as-login-layout">
+<div className="as-login-benefit-icon">
 
-        <section className="as-login-hero">
+<Users size={20} />
 
-          <div className="as-login-badge">
+</div>
 
-            <Sparkles size={15} />
+<div>
 
-            Your journey to forever starts here
+<strong>Meaningful connections</strong>
 
-          </div>
+Discover profiles that match your values.
 
+</div>
 
+</div>
 
-          <h1>
+<div className="as-login-benefit">
 
-            Find your
+<div className="as-login-benefit-icon">
 
-            <br />
+<HeartHandshake size={20} />
 
-            perfect <span>life partner.</span>
+</div>
 
-          </h1>
+<div>
 
+<strong>Relationships that last</strong>
 
+Start building your future together.
 
-          <p>
+</div>
 
-            Welcome back to WowMate. Sign in to discover meaningful
+</div>
 
-            connections, meet compatible people, and take the next step toward
+</div>
 
-            your happily ever after.
+</section>
 
-          </p>
+<section className="as-login-card">
 
+<div className="as-login-card-icon">
 
+<HeartHandshake size={27} />
 
-          <div className="as-login-benefits">
+</div>
 
-            <div className="as-login-benefit">
+<h2>Welcome back!</h2>
 
-              <div className="as-login-benefit-icon">
+<p className="as-login-card-description">
 
-                <ShieldCheck size={20} />
+Sign in to continue your WowMate journey.
 
-              </div>
+</p>
 
-              <div>
+{error && (
 
-                <strong>Privacy you can trust</strong>
+<div className="as-login-error" role="alert">
 
-                Your information matters to us.
+<AlertCircle size={17} />
 
-              </div>
+<span>{error}</span>
 
-            </div>
+</div>
 
+)}
 
+<form onSubmit={handleSubmit}>
 
-            <div className="as-login-benefit">
+<div className="as-login-field">
 
-              <div className="as-login-benefit-icon">
+<label htmlFor="emailOrMobile">Email address</label>
 
-                <Users size={20} />
+<div className="as-login-input-wrap">
 
-              </div>
+<Mail size={18} />
 
-              <div>
+<input
 
-                <strong>Meaningful connections</strong>
+id="emailOrMobile"
 
-                Discover profiles that match your values.
+name="emailOrMobile"
 
-              </div>
+type="text"
 
-            </div>
+autoComplete="username"
 
+placeholder="Enter your registered email"
 
+value={formData.emailOrMobile}
 
-            <div className="as-login-benefit">
+onChange={handleChange}
 
-              <div className="as-login-benefit-icon">
+required
 
-                <HeartHandshake size={20} />
+/>
 
-              </div>
+</div>
 
-              <div>
+</div>
 
-                <strong>Relationships that last</strong>
+<div className="as-login-field">
 
-                Start building your future together.
+<label htmlFor="password">Password</label>
 
-              </div>
+<div className="as-login-input-wrap">
 
-            </div>
+<LockKeyhole size={18} />
 
-          </div>
+<input
 
-        </section>
+id="password"
 
+name="password"
 
+type={showPassword ? "text" : "password"}
 
-        <section className="as-login-card">
+autoComplete="current-password"
 
-          <div className="as-login-card-icon">
+placeholder="Enter your password"
 
-            <HeartHandshake size={27} />
+value={formData.password}
 
-          </div>
+onChange={handleChange}
 
+required
 
+/>
 
-          <h2>Welcome back!</h2>
+<button
 
-          <p className="as-login-card-description">
+type="button"
 
-            Sign in to continue your WowMate journey.
+className="as-login-password-toggle"
 
-          </p>
+onClick={() => setShowPassword((previous) => !previous)}
 
+aria-label={showPassword ? "Hide password" : "Show password"}
 
+>
 
-          {error && (
+{showPassword ? (
 
-            <div className="as-login-error" role="alert">
+<EyeOff size={18} />
 
-              <AlertCircle size={17} />
+) : (
 
-              <span>{error}</span>
+<Eye size={18} />
 
-            </div>
+)}
 
-          )}
+</button>
 
+</div>
 
+</div>
 
-          <form onSubmit={handleSubmit}>
+<div className="as-login-options">
 
-            <div className="as-login-field">
+<label className="as-login-remember">
 
-              <label htmlFor="emailOrMobile">Email address</label>
+<input
 
+type="checkbox"
 
+name="rememberMe"
 
-              <div className="as-login-input-wrap">
+checked={formData.rememberMe}
 
-                <Mail size={18} />
+onChange={handleChange}
 
+/>
 
+Remember me
 
-                <input
+</label>
 
-                  id="emailOrMobile"
+<Link to="/forgot-password">Forgot password?</Link>
 
-                  name="emailOrMobile"
+</div>
 
-                  type="text"
+<button
 
-                  autoComplete="username"
+type="submit"
 
-                  placeholder="Enter your registered email"
+className="as-login-submit"
 
-                  value={formData.emailOrMobile}
+disabled={loading}
 
-                  onChange={handleChange}
+>
 
-                  required
+{loading ? "Signing in..." : "Sign in"}
 
-                />
+{!loading && <ArrowRight size={17} />}
 
-              </div>
+</button>
 
-            </div>
+</form>
 
+<div className="as-login-divider">SECURE SIGN IN</div>
 
+<p className="as-login-signup">
 
-            <div className="as-login-field">
+Don't have an account? <Link to="/register">Create one</Link>
 
-              <label htmlFor="password">Password</label>
+</p>
 
+<p className="as-login-secure">
 
+<ShieldCheck size={14} />
 
-              <div className="as-login-input-wrap">
+Your account information is protected.
 
-                <LockKeyhole size={18} />
+</p>
 
+</section>
 
+</main>
 
-                <input
+<footer className="as-login-footer">
 
-                  id="password"
+<span>© {CURRENT_YEAR} WowMate. All rights reserved.</span>
 
-                  name="password"
+<div className="as-login-footer-links">
 
-                  type={showPassword ? "text" : "password"}
+<Link to="/privacy-policy">Privacy</Link>
 
-                  autoComplete="current-password"
+<Link to="/terms">Terms</Link>
 
-                  placeholder="Enter your password"
+</div>
 
-                  value={formData.password}
+</footer>
 
-                  onChange={handleChange}
+</div>
 
-                  required
-
-                />
-
-
-
-                <button
-
-                  type="button"
-
-                  className="as-login-password-toggle"
-
-                  onClick={() => setShowPassword((previous) => !previous)}
-
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-
-                >
-
-                  {showPassword ? (
-
-                    <EyeOff size={18} />
-
-                  ) : (
-
-                    <Eye size={18} />
-
-                  )}
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="as-login-options">
-
-              <label className="as-login-remember">
-
-                <input
-
-                  type="checkbox"
-
-                  name="rememberMe"
-
-                  checked={formData.rememberMe}
-
-                  onChange={handleChange}
-
-                />
-
-                Remember me
-
-              </label>
-
-
-
-              <Link to="/forgot-password">Forgot password?</Link>
-
-            </div>
-
-
-
-            <button
-
-              type="submit"
-
-              className="as-login-submit"
-
-              disabled={loading}
-
-            >
-
-              {loading ? "Signing in..." : "Sign in"}
-
-              {!loading && <ArrowRight size={17} />}
-
-            </button>
-
-          </form>
-
-
-
-          <div className="as-login-divider">SECURE SIGN IN</div>
-
-
-
-          <p className="as-login-signup">
-
-            Don't have an account? <Link to="/register">Create one</Link>
-
-          </p>
-
-
-
-          <p className="as-login-secure">
-
-            <ShieldCheck size={14} />
-
-            Your account information is protected.
-
-          </p>
-
-        </section>
-
-      </main>
-
-
-
-      <footer className="as-login-footer">
-
-        <span>© {CURRENT_YEAR} WowMate. All rights reserved.</span>
-
-
-
-        <div className="as-login-footer-links">
-
-          <Link to="/privacy-policy">Privacy</Link>
-
-          <Link to="/terms">Terms</Link>
-
-        </div>
-
-      </footer>
-
-    </div>
-
-  );
+);
 
 }

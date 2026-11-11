@@ -90,7 +90,7 @@ export default function Navbar() {
           aria-label="Wowmate home"
         >
           <img
-            src="/image.png"
+            src="image.png"
             alt="Wowmate Matrimony"
             className="navbar-logo-image"
           />

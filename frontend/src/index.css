@@ -86,7 +86,7 @@ body {
   background: #8b5cf6;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 40px 10px rgba(139, 92, 246, 0.2);
 }
 
 .navbar .nav-links > .register-button:hover {
@@ -806,7 +806,7 @@ a:hover {
   padding: 12px 16px;
   border: 0;
   border-radius: 8px;
-  font-weight: 700;
+  font-weight: 70;
   cursor: pointer;
   transition: background 0.2s ease;
 }

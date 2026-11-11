@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">wowmate</string>
+    <string name="title_activity_main">wowmate</string>
+    <string name="package_name">com.wowmate.app</string>
+    <string name="custom_url_scheme">com.wowmate.app</string>
+</resources>

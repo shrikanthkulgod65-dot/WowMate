@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const connectDB = async () => {
@@ -8,16 +9,26 @@ const connectDB = async () => {
       throw new Error("MONGO_URI is missing from the .env file");
     }
 
+    // Connect to MongoDB Atlas automatically.
     const connection = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
     });
 
     console.log(
-     "MongoDB connected successfully "
+      "MongoDB connected successfully:",
+      connection.connection.host
     );
+
+    return connection;
+
   } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
-    process.exit(1);
+    console.error(
+      "MongoDB connection failed:",
+      error.message
+    );
+
+    throw error;
   }
 };
 

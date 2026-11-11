@@ -1,6 +1,8 @@
+
 import {
   BrowserRouter,
   Link,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -9,8 +11,9 @@ import {
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
+import AdminApp from "./admin/AdminApp";
+
 import About from "./pages/About";
-import AdminDashboard from "./pages/AdminDashboard";
 import Dashboard from "./pages/Dashboard";
 import AIMatch from "./pages/AIMatch";
 import Blog from "./pages/Blog";
@@ -38,12 +41,28 @@ function ComingSoon({ title }) {
       <span className="eyebrow">WOWMATE</span>
       <h1>{title}</h1>
       <p>This page is part of our upcoming development phase.</p>
-
       <Link to="/" className="primary-button">
         Back to Home
       </Link>
     </main>
   );
+}
+
+function RequireAuth({ children }) {
+  const token = localStorage.getItem("token");
+  const location = useLocation();
+
+  if (!token) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
+  }
+
+  return children;
 }
 
 function AppRoutes() {
@@ -59,10 +78,10 @@ function AppRoutes() {
       {!isAuthPage && !isAdminPage && <Navbar />}
 
       <Routes>
-        {/* Home */}
+        {/* PUBLIC WEBSITE ROUTES */}
+
         <Route path="/" element={<Home />} />
 
-        {/* Matrimony categories */}
         <Route
           path="/farmer-matrimony"
           element={<FarmerMatrimony />}
@@ -73,79 +92,61 @@ function AppRoutes() {
           element={<ProfessionalMatrimony />}
         />
 
-        {/* Broker Services: primary route and legacy aliases */}
         <Route path="/broker" element={<Brokerservices />} />
+        <Route path="/broker-matrimony" element={<Brokerservices />} />
+        <Route path="/broker-services" element={<Brokerservices />} />
 
-        <Route
-          path="/broker-matrimony"
-          element={<Brokerservices />}
-        />
-
-        <Route
-          path="/broker-services"
-          element={<Brokerservices />}
-        />
-
-        {/* Authentication */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Admin */}
-        <Route path="/admin" element={<AdminDashboard />} />
-
-        {/* User dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
-
         <Route path="/my-profile" element={<MyProfile />} />
+        <Route path="/dashboard/my-profile" element={<MyProfile />} />
 
-        <Route
-          path="/dashboard/my-profile"
-          element={<MyProfile />}
-        />
-
-        {/* Discovery and search */}
         <Route path="/search" element={<SearchResults />} />
+        <Route path="/search-results" element={<SearchResults />} />
 
         <Route
-          path="/search-results"
-          element={<SearchResults />}
+          path="/discover"
+          element={
+            <RequireAuth>
+              <DiscoverProfiles />
+            </RequireAuth>
+          }
         />
-
-        <Route path="/discover" element={<DiscoverProfiles />} />
 
         <Route
           path="/discover-profiles"
-          element={<DiscoverProfiles />}
+          element={
+            <RequireAuth>
+              <DiscoverProfiles />
+            </RequireAuth>
+          }
         />
 
         <Route path="/AIMatch" element={<AIMatch />} />
 
-        {/* User interests */}
         <Route
           path="/my-interests"
           element={<ComingSoon title="My Interests" />}
         />
 
-        {/* Information pages */}
         <Route path="/about" element={<About />} />
-
         <Route path="/contact" element={<Contact />} />
-
         <Route
           path="/subscription-plans"
           element={<SubscriptionPlans />}
         />
-
-        <Route
-          path="/privacy-policy"
-          element={<PrivacyPolicy />}
-        />
-
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
-
         <Route path="/blog" element={<Blog />} />
 
-        {/* Page not found */}
+        {/* FOUNDER & CEO ADMIN PANEL */}
+
+        <Route path="/admin/*" element={<AdminApp />} />
+
+        {/* PAGE NOT FOUND */}
+
         <Route
           path="*"
           element={<ComingSoon title="Page Not Found" />}

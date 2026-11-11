@@ -22,8 +22,8 @@
 </Routes>
 <Route path="/blog" element={<Blog />} />
 <Route path="/login" element={<Login />} />
-<Route path="/register" element={<Register />} />
-<Route path="/admin" element={<AdminDashboard />} />
+<Route path="/register" element={<Register />} /> />
+<Route path="/admin/*" element={<AdminApp />} />
 <Route
   path="/discover-profiles"
   element={<DiscoverProfiles />}

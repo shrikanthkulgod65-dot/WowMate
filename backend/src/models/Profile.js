@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const profileSchema = new mongoose.Schema(
@@ -135,6 +136,7 @@ const profileSchema = new mongoose.Schema(
   }
 );
 
+// Existing indexes
 profileSchema.index({ city: 1, gender: 1 });
 profileSchema.index({ education: 1, occupation: 1 });
 

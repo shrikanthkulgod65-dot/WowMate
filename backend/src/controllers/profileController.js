@@ -195,3 +195,42 @@ export const discoverProfiles = async (req, res) => {
     });
   }
 };
+
+// GET /api/profile/public
+// Public visitors can see only profile name and photo.
+export const getPublicProfiles = async (req, res) => {
+  try {
+    const profiles = await Profile.find({
+      profilePhoto: { $exists: true, $nin: ["", null] },
+    })
+      .select("user profilePhoto")
+      .populate({
+        path: "user",
+        select: "fullName role",
+        match: { role: "user" },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const publicProfiles = profiles
+      .filter((profile) => profile.user)
+      .map((profile) => ({
+        id: profile._id,
+        name: profile.user.fullName,
+        profilePhoto: profile.profilePhoto,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      count: publicProfiles.length,
+      profiles: publicProfiles,
+    });
+  } catch (error) {
+    console.error("Public profiles error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve public profiles.",
+    });
+  }
+};

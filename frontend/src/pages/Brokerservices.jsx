@@ -220,25 +220,40 @@ function hasActiveMatrimonySubscription() {
   if (typeof window === "undefined") return false;
 
   const keys = ["userSubscription", "activeSubscription", "subscription", "subscriptionStatus"];
-  for (const key of keys) {
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (!raw) continue;
-      const value = JSON.parse(raw);
-      if (value && typeof value === "object") {
-        const status = String(value.status || value.subscriptionStatus || "").toLowerCase();
-        const activeFlag = value.isActive === true || value.active === true;
-        const expiry = value.expiresAt || value.expiryDate || value.endDate;
-        const notExpired = !expiry || new Date(expiry).getTime() > Date.now();
-        if ((activeFlag || ["active", "paid", "success", "completed"].includes(status)) && notExpired) return true;
-      } else if (["active", "true", "paid", "success", "completed"].includes(String(value).toLowerCase())) {
-        return true;
+  const storages = [window.localStorage, window.sessionStorage];
+
+  for (const storage of storages) {
+    for (const key of keys) {
+      try {
+        const raw = storage.getItem(key);
+        if (!raw) continue;
+
+        let value;
+        try {
+          value = JSON.parse(raw);
+        } catch {
+          value = raw;
+        }
+
+        if (value && typeof value === "object") {
+          const status = String(value.status || value.subscriptionStatus || "").toLowerCase();
+          const activeFlag = value.isActive === true || value.active === true;
+          const expiry = value.expiresAt || value.expiryDate || value.endDate;
+          const expiryTime = expiry ? new Date(expiry).getTime() : null;
+          const notExpired = expiryTime === null || (Number.isFinite(expiryTime) && expiryTime > Date.now());
+
+          if ((activeFlag || ["active", "paid", "success", "completed"].includes(status)) && notExpired) {
+            return true;
+          }
+        } else if (["active", "true", "paid", "success", "completed"].includes(String(value).toLowerCase())) {
+          return true;
+        }
+      } catch (error) {
+        console.error(`Could not read ${key} from browser storage:`, error);
       }
-    } catch {
-      const raw = window.localStorage.getItem(key);
-      if (["active", "true", "paid", "success", "completed"].includes(String(raw).toLowerCase())) return true;
     }
   }
+
   return false;
 }
 
@@ -257,7 +272,20 @@ export default function BrokerMatrimony() {
     }
   })();
   const isBroker = String(currentUser?.role || "").toLowerCase() === "broker";
-  const hasSubscription = true; // Broker Services profiles are publicly viewable.
+  const authToken =
+    window.localStorage.getItem("token") ||
+    window.sessionStorage.getItem("token");
+  const isLoggedIn = Boolean(currentUser && authToken);
+  // Contact numbers and biodata are visible only to logged-in users with an active subscription.
+  const hasSubscription = isLoggedIn && hasActiveMatrimonySubscription();
+
+  function handleUnlockBrokerDetails() {
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
+    }
+    navigate("/subscription-plans");
+  }
   const [activeTab, setActiveTab] = useState(isBroker ? "dashboard" : "find");
   const [brokers, setBrokers] = useState(() => {
     try {
@@ -1990,7 +2018,7 @@ export default function BrokerMatrimony() {
                         ) : (
                           <div className="broker-service-card" style={{ marginTop: 12 }}>
                             <strong>🔒 Broker details locked</strong>
-                            <p className="broker-muted">Subscribe to view contact information and full profile details.</p>
+                            <p className="broker-muted">{isLoggedIn ? "Subscribe to view contact information and full profile details." : "Register or log in to continue. An active subscription is required to view contact information and biodata."}</p>
                           </div>
                         )}
 
@@ -2004,9 +2032,9 @@ export default function BrokerMatrimony() {
 
                           <button
                             className="broker-btn broker-btn-primary"
-                            onClick={() => hasSubscription ? openBroker(broker) : navigate("/subscription-plans")}
+                            onClick={() => hasSubscription ? openBroker(broker) : handleUnlockBrokerDetails()}
                           >
-                            {hasSubscription ? "View Biodata" : "Subscribe to View Details"}
+                            {hasSubscription ? "View Biodata" : isLoggedIn ? "Subscribe to View Details" : "Login to View Details"}
                           </button>
                         </div>
                       </div>
@@ -2071,8 +2099,8 @@ export default function BrokerMatrimony() {
                     ) : (
                       <div className="broker-service-card" style={{ marginTop: 14 }}>
                         <h3>🔒 Unlock Broker Details</h3>
-                        <p className="broker-muted">The photo and name are public. Subscribe using the existing Wowmate matrimony plan to view the broker's phone number, experience, location, bureau and full profile.</p>
-                        <button type="button" className="broker-btn broker-btn-primary" onClick={() => navigate("/subscription-plans")}>View Subscription Plans →</button>
+                        <p className="broker-muted">The broker's name and photo are public. {isLoggedIn ? "An active matrimony subscription is required to view the phone number, experience, location, bureau and full profile." : "Register or log in first. An active matrimony subscription is required to view contact information and full profile details."}</p>
+                        <button type="button" className="broker-btn broker-btn-primary" onClick={handleUnlockBrokerDetails}>{isLoggedIn ? "View Subscription Plans →" : "Login to Continue →"}</button>
                       </div>
                     )}
                   </div>
@@ -2172,7 +2200,7 @@ export default function BrokerMatrimony() {
                   <div className="broker-service-card">
                     <h3>🔒 Bride and Groom Biodata Is for Subscribers</h3>
                     <p className="broker-muted">Subscribe to the existing matrimony plan to view this broker's managed biodata and profile details.</p>
-                    <button type="button" className="broker-btn broker-btn-primary" onClick={() => navigate("/subscription-plans")}>Subscribe to View Details →</button>
+                    <button type="button" className="broker-btn broker-btn-primary" onClick={handleUnlockBrokerDetails}>{isLoggedIn ? "Subscribe to View Details →" : "Login to Continue →"}</button>
                   </div>
                 )}
               </>
