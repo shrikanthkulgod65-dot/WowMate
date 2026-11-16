@@ -161,7 +161,7 @@ export default function Dashboard() {
     let isMounted = true;
 
     const apiBaseUrl = (
-      import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+      import.meta.env.VITE_API_URL || "http://wowmate.co.in/api"
     ).replace(/\/+$/, "");
 
     const loadDiscoverProfiles = async () => {

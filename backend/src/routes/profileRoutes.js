@@ -5,6 +5,7 @@ import {
   getMyProfile,
   updateMyProfile,
   discoverProfiles,
+  searchProfiles,
   getPublicProfiles,
 } from "../controllers/profileController.js";
 
@@ -27,5 +28,8 @@ router.put("/me", updateMyProfile);
 
 // Get other registered members for Discover Profiles.
 router.get("/discover", discoverProfiles);
+
+// Search registered members.
+router.get("/search", searchProfiles);
 
 export default router;

@@ -1,6 +1,18 @@
 
 import Profile from "../models/Profile.js";
 
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function parseInteger(value, fallback, minimum, maximum) {
+  if (value === undefined || value === "") return fallback;
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
+    ? parsed
+    : null;
+}
+
 const allowedFields = [
   "dateOfBirth",
   "gender",
@@ -192,6 +204,142 @@ export const discoverProfiles = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to retrieve registered profiles.",
+    });
+  }
+};
+
+// GET /api/profile/search
+// Search registered member profiles for the authenticated user.
+export const searchProfiles = async (req, res) => {
+  const page = parseInteger(req.query.page, 1, 1, 100000);
+  const limit = parseInteger(req.query.limit, 12, 1, 50);
+  const minAge = parseInteger(req.query.minAge, null, 18, 100);
+  const maxAge = parseInteger(req.query.maxAge, null, 18, 100);
+  const hasMinAge = req.query.minAge !== undefined && req.query.minAge !== "";
+  const hasMaxAge = req.query.maxAge !== undefined && req.query.maxAge !== "";
+
+  if (
+    page === null ||
+    limit === null ||
+    (hasMinAge && minAge === null) ||
+    (hasMaxAge && maxAge === null) ||
+    (minAge !== null && maxAge !== null && minAge > maxAge)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid profile search filters.",
+    });
+  }
+
+  const query = { user: { $ne: req.user.id } };
+  const gender = String(req.query.gender || "").trim().toLowerCase();
+  const genderValues = {
+    female: "Female",
+    bride: "Female",
+    male: "Male",
+    groom: "Male",
+    other: "Other",
+  };
+
+  if (gender && !genderValues[gender]) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid gender filter.",
+    });
+  }
+
+  if (gender) query.gender = genderValues[gender];
+
+  const occupation = String(req.query.occupation || "").trim();
+  const category = String(req.query.category || "").trim().toLowerCase();
+  const occupationFilters = [];
+
+  if (occupation && occupation.toLowerCase() !== "any profession") {
+    occupationFilters.push({
+      $regex: escapeRegex(occupation),
+      $options: "i",
+    });
+  }
+
+  if (category === "farmer") {
+    occupationFilters.push({
+      $regex: "farmer|agricultur",
+      $options: "i",
+    });
+  } else if (category === "professional") {
+    occupationFilters.push({ $not: /farmer|agricultur/i });
+  } else if (category) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid profile category filter.",
+    });
+  }
+
+  if (occupationFilters.length === 1) {
+    query.occupation = occupationFilters[0];
+  } else if (occupationFilters.length > 1) {
+    query.$and = occupationFilters.map((filter) => ({
+      occupation: filter,
+    }));
+  }
+
+  const city = String(req.query.city || "").trim();
+  if (city) {
+    query.city = { $regex: escapeRegex(city), $options: "i" };
+  }
+
+  if (minAge !== null || maxAge !== null) {
+    const today = new Date();
+    const dateOfBirth = {};
+
+    if (minAge !== null) {
+      const youngestBirthDate = new Date(today);
+      youngestBirthDate.setFullYear(today.getFullYear() - minAge);
+      dateOfBirth.$lte = youngestBirthDate;
+    }
+
+    if (maxAge !== null) {
+      const oldestBirthDate = new Date(today);
+      oldestBirthDate.setFullYear(today.getFullYear() - maxAge - 1);
+      dateOfBirth.$gt = oldestBirthDate;
+    }
+
+    query.dateOfBirth = dateOfBirth;
+  }
+
+  try {
+    const [profiles, total] = await Promise.all([
+      Profile.find(query)
+        .select(
+          "user dateOfBirth gender community maritalStatus height education occupation annualIncome aboutMe country state city profilePhoto createdAt"
+        )
+        .populate("user", "fullName")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Profile.countDocuments(query),
+    ]);
+
+    const registeredProfiles = profiles.filter((profile) => profile.user);
+
+    return res.status(200).json({
+      success: true,
+      count: registeredProfiles.length,
+      total,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      profiles: registeredProfiles,
+    });
+  } catch (error) {
+    console.error("Profile search error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to search profiles.",
     });
   }
 };

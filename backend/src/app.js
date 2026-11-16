@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
+import connectDB from "./config/db.js";
 import interestRoutes from "./routes/interestRoutes.js";
 import brokerRoutes from "./routes/brokerRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -21,7 +22,7 @@ const app = express();
 
 // CORS configuration
 const allowedOrigins = [
-  "http://localhost:5173",
+  "http://wowmate.co.in",
   "http://127.0.0.1:5173",
   process.env.CLIENT_URL,
 ].filter(Boolean);
@@ -45,6 +46,20 @@ app.use(
 // Parse incoming request bodies
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Ensure MongoDB is connected before every API request (required for Vercel serverless).
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("DB connection error:", error.message);
+    res.status(503).json({
+      success: false,
+      message: "Service temporarily unavailable. Please try again.",
+    });
+  }
+});
 
 // Root API
 app.get("/", (req, res) => {

@@ -357,7 +357,7 @@ export default function BrokerMatrimony() {
 
     async function loadBrokerDirectory() {
       try {
-        const response = await fetch("http://localhost:5000/api/broker/profiles");
+        const response = await fetch("http://wowmate.co.in/api/broker/profiles");
         const data = await response.json();
 
         if (!response.ok) {
@@ -422,7 +422,7 @@ export default function BrokerMatrimony() {
 
       try {
         setBrokerProfileLoading(true);
-        const response = await fetch("http://localhost:5000/api/broker/profile", {
+        const response = await fetch("http://wowmate.co.in/api/broker/profile", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -492,7 +492,7 @@ export default function BrokerMatrimony() {
     try {
       setBrokerProfileSaving(true);
       setNotice("");
-      const response = await fetch("http://localhost:5000/api/broker/profile", {
+      const response = await fetch("http://wowmate.co.in/api/broker/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -642,7 +642,7 @@ export default function BrokerMatrimony() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch("http://wowmate.co.in/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: brokerLoginForm.password }),
@@ -745,7 +745,7 @@ export default function BrokerMatrimony() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register-broker", {
+      const response = await fetch("http://wowmate.co.in/api/auth/register-broker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: name, email, password }),

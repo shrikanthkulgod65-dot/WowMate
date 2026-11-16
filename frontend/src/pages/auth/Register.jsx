@@ -599,7 +599,7 @@ export default function Register() {
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(result.message || "Registration failed. Please try again.");
@@ -687,6 +687,52 @@ export default function Register() {
       if (result.user) {
         localStorage.setItem("user", JSON.stringify(result.user));
       }
+
+      try {
+        const profileResponse = await fetch("/api/profile/me", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${result.token}`,
+          },
+          body: JSON.stringify({
+            dateOfBirth: formData.dateOfBirth,
+            gender: formData.gender,
+            community: formData.community,
+            maritalStatus: formData.maritalStatus,
+            height: formData.height,
+            education: formData.education,
+            occupation: formData.profession,
+            annualIncome: formData.annualIncome,
+            country: formData.country,
+            state: formData.state,
+            city: formData.city,
+            profilePhoto: photos[0] || "",
+            partnerPreferences: {
+              minAge: Number(formData.partnerAgeMin),
+              maxAge: Number(formData.partnerAgeMax),
+              preferredCity: formData.partnerLocation,
+              preferredEducation: formData.partnerEducation,
+              preferredOccupation: formData.partnerProfession,
+            },
+          }),
+        });
+        const profileResult = await profileResponse.json().catch(() => ({}));
+
+        if (!profileResponse.ok) {
+          throw new Error(
+            profileResult.message || "Please try again from your profile page."
+          );
+        }
+      } catch (profileError) {
+        window.dispatchEvent(new Event("authChanged"));
+        setError(
+          `Your account was created, but your profile could not be saved: ${profileError.message}`
+        );
+        return;
+      }
+
+      window.dispatchEvent(new Event("authChanged"));
 
       // Matrimony members go straight to Discover Profiles after registration.
       navigate("/discover-profiles", { replace: true });

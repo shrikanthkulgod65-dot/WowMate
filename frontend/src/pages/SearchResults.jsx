@@ -2,9 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-).replace(/\/+$/, "");
+const API_BASE_URL = "/api";
 
 const normalize = (value) =>
   String(value ?? "").trim().toLowerCase();
@@ -182,12 +180,16 @@ export default function SearchResults() {
       setError("");
 
       try {
+        const token =
+          localStorage.getItem("token") ||
+          sessionStorage.getItem("token");
         const response = await fetch(
           `${API_BASE_URL}/profile/search?${searchQuery}`,
           {
             method: "GET",
             headers: {
               Accept: "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             signal,
           }
