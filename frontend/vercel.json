@@ -4,6 +4,10 @@
     {
       "source": "/api/(.*)",
       "destination": "https://wowmate-backend.vercel.app/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
