@@ -10,7 +10,7 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "https://wowmate.co.in",
         changeOrigin: true,
       },
     },
