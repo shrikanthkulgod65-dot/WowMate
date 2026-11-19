@@ -86,6 +86,47 @@ async function prepareProfilePhoto(file) {
 
 
 
+const RELIGION_COMMUNITIES = {
+  Hindu: [
+    "Brahmin", "Kshatriya / Rajput", "Vaishya", "Reddy", "Lingayat",
+    "Vokkaliga", "Maratha", "Jat", "Yadav", "Kurmi", "Patel / Patidar",
+    "Nair", "Ezhava", "Kamma", "Kapu", "Velama", "Gounder", "Thevar",
+    "Chettiar", "Mudaliar", "Naidu", "Bania", "Agarwal", "Kayastha",
+    "Khatri", "Arora", "Gurjar", "Other"
+  ],
+  Muslim: [
+    "Sunni", "Shia", "Syed", "Sheikh", "Pathan", "Qureshi", "Ansari",
+    "Memon", "Bohra", "Khoja", "Mappila", "Other"
+  ],
+  Christian: [
+    "Roman Catholic", "Latin Catholic", "Syrian Catholic", "Syrian Orthodox",
+    "Jacobite", "Marthoma", "Protestant", "Pentecostal", "CSI", "CNI", "Other"
+  ],
+  Sikh: [
+    "Jat Sikh", "Khatri", "Arora", "Ramgarhia", "Ahluwalia", "Saini",
+    "Mazhabi Sikh", "Other"
+  ],
+  Buddhist: [
+    "Navayana", "Theravada", "Mahayana", "Vajrayana", "Tibetan Buddhist", "Other"
+  ],
+  Jain: [
+    "Digambar", "Shwetambar", "Sthanakvasi", "Terapanthi", "Oswal", "Other"
+  ],
+  Jewish: ["Bene Israel", "Baghdadi Jewish", "Cochin Jewish", "Other"],
+  "Zoroastrian (Parsi)": ["Parsi", "Irani Zoroastrian", "Other"],
+  "Baháʼí": ["Baháʼí", "Other"],
+  "Indigenous / Tribal faith": [
+    "Gond", "Santhal", "Bhil", "Munda", "Oraon", "Other"
+  ],
+  Sanamahism: ["Meitei", "Other"],
+  "Sarna faith": ["Sarna", "Adivasi / Tribal community", "Other"],
+  "Donyi-Polo": ["Adi", "Apatani", "Nyishi", "Galo", "Other"],
+  "Nature worship / Other indigenous faith": ["Indigenous / Tribal community", "Other"],
+  "No religion": ["Not applicable"],
+  Other: ["Other"],
+  "Prefer not to say": ["Prefer not to say"]
+};
+
 export default function Register() {
 
   const navigate = useNavigate();
@@ -151,9 +192,10 @@ export default function Register() {
 
     maritalStatus: "",
 
-
-
+    religion: "",
+    otherReligion: "",
     community: "",
+    otherCommunity: "",
 
     education: "",
 
@@ -220,11 +262,11 @@ export default function Register() {
 
 
     setFormData((previous) => ({
-
       ...previous,
-
       [name]: type === "checkbox" ? checked : value,
-
+      ...(name === "religion"
+        ? { community: "", otherCommunity: "" }
+        : {}),
     }));
 
 
@@ -428,6 +470,8 @@ export default function Register() {
         !formData.dateOfBirth ||
 
         !formData.maritalStatus ||
+        !formData.religion ||
+        (formData.religion === "Other" && !formData.otherReligion.trim()) ||
 
         !formData.education ||
 
@@ -634,7 +678,12 @@ export default function Register() {
               .join(" · ") ||
             "Wowmate member",
           maritalStatus: formData.maritalStatus,
-          community: formData.community,
+          religion: formData.religion === "Other"
+            ? formData.otherReligion.trim()
+            : formData.religion,
+          community: formData.community === "Other"
+            ? formData.otherCommunity.trim()
+            : formData.community,
           annualIncome: formData.annualIncome,
           interests: formData.interests,
           profileFor: formData.profileFor,
@@ -698,7 +747,12 @@ export default function Register() {
           body: JSON.stringify({
             dateOfBirth: formData.dateOfBirth,
             gender: formData.gender,
-            community: formData.community,
+            religion: formData.religion === "Other"
+              ? formData.otherReligion.trim()
+              : formData.religion,
+            community: formData.community === "Other"
+              ? formData.otherCommunity.trim()
+              : formData.community,
             maritalStatus: formData.maritalStatus,
             height: formData.height,
             education: formData.education,
@@ -3388,27 +3442,86 @@ export default function Register() {
 
 
                       <div className="as-register-field">
-
-                        <label htmlFor="community">Community</label>
-
-
-
-                        <input
-
+                        <label htmlFor="religion">
+                          Religion<span className="required">*</span>
+                        </label>
+                        <select
                           className={inputClass}
-
-                          id="community"
-
-                          name="community"
-
-                          value={formData.community}
-
+                          id="religion"
+                          name="religion"
+                          value={formData.religion}
                           onChange={updateField}
+                          required
+                        >
+                          <option value="">Select religion</option>
+                          <option value="Hindu">Hindu</option>
+                          <option value="Muslim">Muslim</option>
+                          <option value="Christian">Christian</option>
+                          <option value="Sikh">Sikh</option>
+                          <option value="Buddhist">Buddhist</option>
+                          <option value="Jain">Jain</option>
+                          <option value="Jewish">Jewish</option>
+                          <option value="Zoroastrian (Parsi)">Zoroastrian (Parsi)</option>
+                          <option value="Baháʼí">Baháʼí</option>
+                          <option value="Indigenous / Tribal faith">Indigenous / Tribal faith</option>
+                          <option value="Sanamahism">Sanamahism</option>
+                          <option value="Sarna faith">Sarna faith</option>
+                          <option value="Donyi-Polo">Donyi-Polo</option>
+                          <option value="Nature worship / Other indigenous faith">Nature worship / Other indigenous faith</option>
+                          <option value="No religion">No religion</option>
+                          <option value="Other">Other</option>
+                          <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                      </div>
 
-                          placeholder="Optional"
+                      {formData.religion === "Other" && (
+                        <div className="as-register-field">
+                          <label htmlFor="otherReligion">
+                            Please specify religion<span className="required">*</span>
+                          </label>
+                          <input
+                            className={inputClass}
+                            id="otherReligion"
+                            name="otherReligion"
+                            value={formData.otherReligion}
+                            onChange={updateField}
+                            placeholder="Enter your religion or faith"
+                            maxLength={80}
+                            required
+                          />
+                        </div>
+                      )}
 
-                        />
-
+                      <div className="as-register-field">
+                        <label htmlFor="community">Community / Caste / Denomination</label>
+                        <select
+                          className={inputClass}
+                          id="community"
+                          name="community"
+                          value={formData.community}
+                          onChange={updateField}
+                          disabled={!formData.religion}
+                        >
+                          <option value="">Select community (optional)</option>
+                          {(RELIGION_COMMUNITIES[formData.religion] || ["Other"]).map((item) => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </select>
+                        {formData.community === "Other" && (
+                          <input
+                            className={inputClass}
+                            id="otherCommunity"
+                            name="otherCommunity"
+                            value={formData.otherCommunity}
+                            onChange={updateField}
+                            placeholder="Enter your community / caste / denomination"
+                            maxLength={80}
+                            style={{ marginTop: "9px" }}
+                          />
+                        )}
+                        <p className="as-register-help">
+                          Community options depend on the religion selected. This field is optional.
+                        </p>
                       </div>
 
                     </div>
