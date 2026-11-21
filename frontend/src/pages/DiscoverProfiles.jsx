@@ -1,13 +1,10 @@
+
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { sendInterest, getSentInterests } from "../services/interestService.js";
-
-
-const demoProfiles = [
-  { id: "demo-priya", isDemo: true, name: "Priya Sharma", age: 27, gender: "Bride", profession: "Software Engineer", education: "B.Tech", location: "Bengaluru, Karnataka", category: "Professional", height: "5'4\"", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80", photos: ["https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"], about: "Demo preview profile for checking the design and profile cards." },
-  { id: "demo-ananya", isDemo: true, name: "Ananya Rao", age: 26, gender: "Bride", profession: "Doctor", education: "MBBS", location: "Mysuru, Karnataka", category: "Professional", height: "5'3\"", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80", photos: ["https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"], about: "Demo preview profile for checking the design and profile cards." },
-  { id: "demo-sneha", isDemo: true, name: "Sneha Kulkarni", age: 25, gender: "Bride", profession: "Teacher", education: "M.A., B.Ed.", location: "Belagavi, Karnataka", category: "Professional", height: "5'5\"", image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80", photos: ["https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"], about: "Demo preview profile for checking the design and profile cards." },
-];
+import {
+  sendInterest,
+  getSentInterests,
+} from "../services/interestService.js";
 
 const defaultFilters = {
   keyword: "",
@@ -18,12 +15,10 @@ const defaultFilters = {
   location: "",
 };
 
-
 const FALLBACK_PROFILE_IMAGE =
   "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate";
 
-// Cloudinary normally returns a URL string in profilePhoto. This helper also
-// accepts common object shapes so older and newer API responses both work.
+// Supports Cloudinary URL strings and common image object formats.
 const getPhotoUrl = (photo) => {
   if (typeof photo === "string") return photo.trim();
   if (!photo || typeof photo !== "object") return "";
@@ -44,12 +39,14 @@ const getProfilePhotos = (profile, user) => {
     user?.photos,
   ];
 
-  return [...new Set(
-    values
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .map(getPhotoUrl)
-      .filter(Boolean)
-  )];
+  return [
+    ...new Set(
+      values
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .map(getPhotoUrl)
+        .filter(Boolean)
+    ),
+  ];
 };
 
 export default function DiscoverProfiles() {
@@ -65,28 +62,29 @@ export default function DiscoverProfiles() {
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [profilesError, setProfilesError] = useState("");
 
-  // Fetch only real profiles from MongoDB. Demo and browser-only profiles are not shown.
+  // Load registered profiles from the Wowmate backend.
   React.useEffect(() => {
     let cancelled = false;
 
     const loadBackendProfiles = async () => {
       const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token");
 
       if (!token) {
         setBackendProfiles([]);
-        setProfilesError("Please log in to view registered member profiles.");
+        setProfilesError(
+          "Please log in to view registered member profiles."
+        );
         setProfilesLoading(false);
         return;
       }
-
-      const apiBase = "/api";
 
       try {
         setProfilesLoading(true);
         setProfilesError("");
 
-        const response = await fetch(`${apiBase}/profile/discover`, {
+        const response = await fetch("/api/profile/discover", {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -95,9 +93,11 @@ export default function DiscoverProfiles() {
         });
 
         const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
           throw new Error(
-            data.message || `Unable to load profiles (HTTP ${response.status}).`
+            data.message ||
+              `Unable to load profiles (HTTP ${response.status}).`
           );
         }
 
@@ -110,14 +110,19 @@ export default function DiscoverProfiles() {
               : [];
 
         let currentUserId = "";
+
         try {
           const currentUser = JSON.parse(
             localStorage.getItem("user") ||
               sessionStorage.getItem("user") ||
               "null"
           );
+
           currentUserId = String(
-            currentUser?._id || currentUser?.id || currentUser?.userId || ""
+            currentUser?._id ||
+              currentUser?.id ||
+              currentUser?.userId ||
+              ""
           );
         } catch {
           currentUserId = "";
@@ -126,36 +131,70 @@ export default function DiscoverProfiles() {
         const normalized = records
           .map((item) => {
             const rawUser = item?.user;
+
             const receiverId =
               typeof rawUser === "string"
                 ? rawUser
-                : rawUser?._id || rawUser?.id || item?.userId || "";
+                : rawUser?._id ||
+                  rawUser?.id ||
+                  item?.userId ||
+                  "";
 
-            if (!/^[a-f\d]{24}$/i.test(String(receiverId))) return null;
-            if (currentUserId && String(receiverId) === currentUserId) return null;
+            // Do not display records without a valid MongoDB user ID.
+            if (!/^[a-f\d]{24}$/i.test(String(receiverId))) {
+              return null;
+            }
+
+            // Do not display the currently logged-in user's own profile.
+            if (
+              currentUserId &&
+              String(receiverId) === currentUserId
+            ) {
+              return null;
+            }
 
             const user =
-              rawUser && typeof rawUser === "object" ? rawUser : {};
+              rawUser && typeof rawUser === "object"
+                ? rawUser
+                : {};
+
             const profilePhotos = getProfilePhotos(item, user);
-            const dob = item.dateOfBirth ? new Date(item.dateOfBirth) : null;
+
+            const dob = item.dateOfBirth
+              ? new Date(item.dateOfBirth)
+              : null;
+
             let age = null;
 
             if (dob && !Number.isNaN(dob.getTime())) {
               const today = new Date();
+
               age = today.getFullYear() - dob.getFullYear();
+
               const beforeBirthday =
                 today.getMonth() < dob.getMonth() ||
                 (today.getMonth() === dob.getMonth() &&
                   today.getDate() < dob.getDate());
+
               if (beforeBirthday) age -= 1;
-              if (age < 18 || age > 100) age = null;
+
+              if (age < 18 || age > 100) {
+                age = null;
+              }
             }
 
-            const occupation = item.occupation || "Not specified";
+            const occupation =
+              item.occupation || "Not specified";
+
             const category = /farm|agri/i.test(occupation)
               ? "Farmer"
               : "Professional";
-            const location = [item.city, item.state, item.country]
+
+            const location = [
+              item.city,
+              item.state,
+              item.country,
+            ]
               .filter(Boolean)
               .join(", ");
 
@@ -163,7 +202,10 @@ export default function DiscoverProfiles() {
               id: String(item._id || receiverId),
               user: String(receiverId),
               userId: String(receiverId),
-              name: user.fullName || user.name || "Wowmate Member",
+              name:
+                user.fullName ||
+                user.name ||
+                "Wowmate Member",
               age,
               gender:
                 item.gender === "Female"
@@ -172,11 +214,12 @@ export default function DiscoverProfiles() {
                     ? "Groom"
                     : "",
               profession: occupation,
-              education: item.education || "Not specified",
-              location: location || "Location not specified",
+              education:
+                item.education || "Not specified",
+              location:
+                location || "Location not specified",
               category,
               height: item.height || "",
-              // Profile photos are Cloudinary URLs saved by the backend upload route.
               image: profilePhotos[0] || "",
               photos: profilePhotos,
               about: item.aboutMe || item.about || "",
@@ -185,26 +228,40 @@ export default function DiscoverProfiles() {
           })
           .filter(Boolean);
 
-        if (!cancelled) setBackendProfiles(normalized);
+        if (!cancelled) {
+          setBackendProfiles(normalized);
+        }
       } catch (error) {
         if (!cancelled) {
           setBackendProfiles([]);
-          setProfilesError(error.message || "Unable to load registered profiles.");
+          setProfilesError(
+            error.message ||
+              "Unable to load registered profiles."
+          );
         }
       } finally {
-        if (!cancelled) setProfilesLoading(false);
+        if (!cancelled) {
+          setProfilesLoading(false);
+        }
       }
     };
 
     loadBackendProfiles();
 
-    // Re-fetch when registration/login or a profile update completes in this tab.
     window.addEventListener("authChanged", loadBackendProfiles);
-    window.addEventListener("apnishaadi-profiles-updated", loadBackendProfiles);
+    window.addEventListener(
+      "apnishaadi-profiles-updated",
+      loadBackendProfiles
+    );
 
     return () => {
       cancelled = true;
-      window.removeEventListener("authChanged", loadBackendProfiles);
+
+      window.removeEventListener(
+        "authChanged",
+        loadBackendProfiles
+      );
+
       window.removeEventListener(
         "apnishaadi-profiles-updated",
         loadBackendProfiles
@@ -212,30 +269,43 @@ export default function DiscoverProfiles() {
     };
   }, []);
 
-  // Load already-sent interests so buttons show the correct state after refresh.
+  // Load interests already sent by the logged-in member.
   React.useEffect(() => {
     let cancelled = false;
+
     const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+
     if (!token) return undefined;
 
     getSentInterests()
       .then((response) => {
         if (cancelled) return;
+
         const interests = Array.isArray(response)
           ? response
           : response.interests || [];
+
         const ids = interests
           .map((entry) => {
             const receiver = entry.receiver;
-            return typeof receiver === "string" ? receiver : receiver?._id;
+
+            return typeof receiver === "string"
+              ? receiver
+              : receiver?._id;
           })
-          .filter((id) => /^[a-f\d]{24}$/i.test(String(id || "")))
+          .filter((id) =>
+            /^[a-f\d]{24}$/i.test(String(id || ""))
+          )
           .map(String);
+
         setSentInterestIds(ids);
       })
       .catch((error) => {
-        if (!cancelled) console.error("Load sent interests error:", error);
+        if (!cancelled) {
+          console.error("Load sent interests error:", error);
+        }
       });
 
     return () => {
@@ -244,21 +314,24 @@ export default function DiscoverProfiles() {
   }, []);
 
   const updateFilter = (key, value) => {
-    setFilters((current) => ({ ...current, [key]: value }));
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
   };
 
-  const resetFilters = () => setFilters(defaultFilters);
+  const resetFilters = () => {
+    setFilters(defaultFilters);
+  };
 
+  // IMPORTANT: only backendProfiles are used here.
   const filteredProfiles = useMemo(() => {
     const keyword = filters.keyword.trim().toLowerCase();
     const location = filters.location.trim().toLowerCase();
     const minAge = Number(filters.minAge);
     const maxAge = Number(filters.maxAge);
 
-    // Keep a few demo photo cards for UI testing; backend members remain separate.
-    const allProfiles = [...backendProfiles, ...demoProfiles];
-
-    const results = allProfiles.filter((profile) => {
+    const results = backendProfiles.filter((profile) => {
       const searchableText = [
         profile.name,
         profile.profession,
@@ -272,18 +345,25 @@ export default function DiscoverProfiles() {
       return (
         (!keyword || searchableText.includes(keyword)) &&
         (!filters.gender || profile.gender === filters.gender) &&
-        (!filters.category || profile.category === filters.category) &&
-        (profile.age == null || (profile.age >= minAge && profile.age <= maxAge)) &&
-        (!location || profile.location.toLowerCase().includes(location))
+        (!filters.category ||
+          profile.category === filters.category) &&
+        (profile.age == null ||
+          (profile.age >= minAge && profile.age <= maxAge)) &&
+        (!location ||
+          profile.location.toLowerCase().includes(location))
       );
     });
 
     if (sortBy === "age-asc") {
-      return results.sort((a, b) => a.age - b.age);
+      return results.sort(
+        (a, b) => (a.age ?? 0) - (b.age ?? 0)
+      );
     }
 
     if (sortBy === "age-desc") {
-      return results.sort((a, b) => b.age - a.age);
+      return results.sort(
+        (a, b) => (b.age ?? 0) - (a.age ?? 0)
+      );
     }
 
     return results;
@@ -297,42 +377,57 @@ export default function DiscoverProfiles() {
     );
   };
 
+  // Send interest to a registered backend member.
   const handleSendInterest = async (profile) => {
-    if (profile.isDemo) {
-      window.alert("This is a demo preview photo. To test Express Interest, use a registered member profile linked to a backend account.");
-      return;
-    }
-
     const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
 
     if (!token) {
       window.alert("Please log in to express interest.");
       return;
     }
 
-    // This page now renders backend profiles only. Use the linked User ID,
-    // never the Profile document ID, as the interest receiver.
-    const receiverId = String(profile.userId || profile.user || "");
+    const receiverId = String(
+      profile.userId || profile.user || ""
+    );
 
-    if (!profile.isBackendProfile || !/^[a-f\d]{24}$/i.test(receiverId)) {
-      window.alert("This member profile is not linked to a valid backend user account. Please refresh profiles or contact support.");
+    if (
+      !profile.isBackendProfile ||
+      !/^[a-f\d]{24}$/i.test(receiverId)
+    ) {
+      window.alert(
+        "This member profile is not linked to a valid backend user account. Please refresh profiles or contact support."
+      );
       return;
     }
 
-    if (interestLoadingId === profile.id || sentInterestIds.includes(receiverId)) {
+    if (
+      interestLoadingId === profile.id ||
+      sentInterestIds.includes(receiverId)
+    ) {
       return;
     }
 
     try {
       setInterestLoadingId(profile.id);
+
       const response = await sendInterest(receiverId);
+
       setSentInterestIds((current) =>
-        current.includes(receiverId) ? current : [...current, receiverId]
+        current.includes(receiverId)
+          ? current
+          : [...current, receiverId]
       );
-      window.alert(response.message || "Interest sent successfully.");
+
+      window.alert(
+        response.message || "Interest sent successfully."
+      );
     } catch (error) {
-      window.alert(error.message || "Unable to send interest. Please try again.");
+      window.alert(
+        error.message ||
+          "Unable to send interest. Please try again."
+      );
     } finally {
       setInterestLoadingId(null);
     }
@@ -625,12 +720,6 @@ export default function DiscoverProfiles() {
           font-size: 19px;
         }
 
-        .discover-demo-tag {
-          color: #198754;
-          font-size: 10px;
-          font-weight: 700;
-        }
-
         .discover-meta {
           margin: 7px 0;
           color: var(--muted);
@@ -671,6 +760,11 @@ export default function DiscoverProfiles() {
           border: 1px solid var(--border);
           background: white;
           color: var(--primary);
+        }
+
+        .discover-interest:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
         }
 
         .discover-empty {
@@ -891,7 +985,8 @@ export default function DiscoverProfiles() {
           <div>
             <h2>Discover Profiles</h2>
             <p>
-              {filteredProfiles.length} {filteredProfiles.length === 1 ? "profile" : "profiles"} found
+              {filteredProfiles.length}{" "}
+              {filteredProfiles.length === 1 ? "profile" : "profiles"} found
               {" · "}
               {savedProfiles.length} saved
             </p>
@@ -924,6 +1019,7 @@ export default function DiscoverProfiles() {
             <aside className="discover-filters">
               <div className="discover-filter-heading">
                 <h3>Filter Profiles</h3>
+
                 <button
                   type="button"
                   className="discover-reset"
@@ -934,7 +1030,10 @@ export default function DiscoverProfiles() {
               </div>
 
               <div className="discover-field">
-                <label htmlFor="dp-keyword">Name or profession</label>
+                <label htmlFor="dp-keyword">
+                  Name or profession
+                </label>
+
                 <input
                   id="dp-keyword"
                   type="search"
@@ -948,6 +1047,7 @@ export default function DiscoverProfiles() {
 
               <div className="discover-field">
                 <label htmlFor="dp-gender">Looking for</label>
+
                 <select
                   id="dp-gender"
                   value={filters.gender}
@@ -962,7 +1062,10 @@ export default function DiscoverProfiles() {
               </div>
 
               <div className="discover-field">
-                <label htmlFor="dp-category">Matrimony category</label>
+                <label htmlFor="dp-category">
+                  Matrimony category
+                </label>
+
                 <select
                   id="dp-category"
                   value={filters.category}
@@ -979,6 +1082,7 @@ export default function DiscoverProfiles() {
 
               <div className="discover-field">
                 <label>Age range</label>
+
                 <div className="discover-age-grid">
                   <select
                     aria-label="Minimum age"
@@ -987,13 +1091,14 @@ export default function DiscoverProfiles() {
                       updateFilter("minAge", event.target.value)
                     }
                   >
-                    {Array.from({ length: 43 }, (_, i) => i + 18).map(
-                      (age) => (
-                        <option key={age} value={age}>
-                          Min {age}
-                        </option>
-                      )
-                    )}
+                    {Array.from(
+                      { length: 43 },
+                      (_, i) => i + 18
+                    ).map((age) => (
+                      <option key={age} value={age}>
+                        Min {age}
+                      </option>
+                    ))}
                   </select>
 
                   <select
@@ -1003,19 +1108,21 @@ export default function DiscoverProfiles() {
                       updateFilter("maxAge", event.target.value)
                     }
                   >
-                    {Array.from({ length: 43 }, (_, i) => i + 18).map(
-                      (age) => (
-                        <option key={age} value={age}>
-                          Max {age}
-                        </option>
-                      )
-                    )}
+                    {Array.from(
+                      { length: 43 },
+                      (_, i) => i + 18
+                    ).map((age) => (
+                      <option key={age} value={age}>
+                        Max {age}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div className="discover-field">
                 <label htmlFor="dp-location">Location</label>
+
                 <input
                   id="dp-location"
                   type="text"
@@ -1039,25 +1146,38 @@ export default function DiscoverProfiles() {
 
           <section aria-label="Matching matrimonial profiles">
             {profilesLoading && (
-              <p className="discover-note" role="status">Loading registered Wowmate profiles...</p>
-            )}
-            {profilesError && (
-              <p className="discover-note" role="alert">
-                {profilesError} Make sure the backend GET /api/profile/discover endpoint is configured.
+              <p className="discover-note" role="status">
+                Loading registered Wowmate profiles...
               </p>
             )}
+
+            {profilesError && (
+              <p className="discover-note" role="alert">
+                {profilesError} Make sure the backend GET
+                /api/profile/discover endpoint is configured.
+              </p>
+            )}
+
             <div className="discover-grid">
               {filteredProfiles.map((profile) => (
-                <article className="discover-card" key={profile.id}>
+                <article
+                  className="discover-card"
+                  key={profile.id}
+                >
                   <div className="discover-image-wrap">
                     <img
                       className="discover-image"
-                      src={profile.image || profile.photos?.[0] || FALLBACK_PROFILE_IMAGE}
+                      src={
+                        profile.image ||
+                        profile.photos?.[0] ||
+                        FALLBACK_PROFILE_IMAGE
+                      }
                       alt={`Profile photo of ${profile.name}`}
                       loading="lazy"
                       onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+                        event.currentTarget.src =
+                          FALLBACK_PROFILE_IMAGE;
                       }}
                     />
 
@@ -1080,29 +1200,37 @@ export default function DiscoverProfiles() {
                       }
                       onClick={() => toggleSaved(profile.id)}
                     >
-                      {savedProfiles.includes(profile.id) ? "♥" : "♡"}
+                      {savedProfiles.includes(profile.id)
+                        ? "♥"
+                        : "♡"}
                     </button>
                   </div>
 
                   <div className="discover-card-content">
                     <div className="discover-name-row">
                       <h3>
-                        {profile.name}, {profile.age}
+                        {profile.name}
+                        {profile.age != null
+                          ? `, ${profile.age}`
+                          : ""}
                       </h3>
-                      {profile.isDemo && <span className="discover-demo-tag">DEMO</span>}
                     </div>
 
                     <p className="discover-meta">
                       💼 {profile.profession}
                     </p>
+
                     <p className="discover-meta">
                       🎓 {profile.education}
                     </p>
+
                     <p className="discover-meta">
                       📍 {profile.location}
                     </p>
 
-                    <p className="discover-about">{profile.about}</p>
+                    <p className="discover-about">
+                      {profile.about}
+                    </p>
 
                     <div className="discover-card-actions">
                       <button
@@ -1110,7 +1238,11 @@ export default function DiscoverProfiles() {
                         className="discover-view"
                         onClick={() => {
                           setSelectedProfile(profile);
-                          setSelectedPhoto(profile.image || profile.photos?.[0] || FALLBACK_PROFILE_IMAGE);
+                          setSelectedPhoto(
+                            profile.image ||
+                              profile.photos?.[0] ||
+                              FALLBACK_PROFILE_IMAGE
+                          );
                         }}
                       >
                         View Details
@@ -1121,47 +1253,55 @@ export default function DiscoverProfiles() {
                         className="discover-interest"
                         onClick={() => handleSendInterest(profile)}
                         disabled={
-                          profile.isDemo ||
                           interestLoadingId === profile.id ||
-                          sentInterestIds.includes(String(profile.userId || profile.user))
+                          sentInterestIds.includes(
+                            String(profile.userId || profile.user)
+                          )
                         }
                         aria-busy={interestLoadingId === profile.id}
                       >
-                        {profile.isDemo
-                          ? "Demo Preview"
-                          : interestLoadingId === profile.id
-                            ? "Sending..."
-                            : sentInterestIds.includes(String(profile.userId || profile.user))
-                              ? "Interest Sent"
-                              : "Express Interest"}
+                        {interestLoadingId === profile.id
+                          ? "Sending..."
+                          : sentInterestIds.includes(
+                                String(profile.userId || profile.user)
+                              )
+                            ? "Interest Sent"
+                            : "Express Interest"}
                       </button>
                     </div>
                   </div>
                 </article>
               ))}
 
-              {!profilesLoading && !profilesError && filteredProfiles.length === 0 && (
-                <div className="discover-empty">
-                  <div style={{ fontSize: 38 }}>🔎</div>
-                  <h3>No matching profiles found</h3>
-                  <p>
-                    Try changing your search, age range, category, or location.
-                  </p>
-                  <button
-                    type="button"
-                    className="discover-button"
-                    onClick={resetFilters}
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
+              {!profilesLoading &&
+                !profilesError &&
+                filteredProfiles.length === 0 && (
+                  <div className="discover-empty">
+                    <div style={{ fontSize: 38 }}>🔎</div>
+
+                    <h3>No matching profiles found</h3>
+
+                    <p>
+                      Try changing your search, age range,
+                      category, or location.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="discover-button"
+                      onClick={resetFilters}
+                    >
+                      Clear All Filters
+                    </button>
+                  </div>
+                )}
             </div>
           </section>
         </div>
 
         <p className="discover-note">
-          Registered member profiles are loaded from your Wowmate backend. Demo preview photos are shown for layout testing only and cannot receive interest requests.
+          Registered member profiles are loaded directly from your
+          Wowmate backend.
         </p>
       </div>
 
@@ -1194,11 +1334,14 @@ export default function DiscoverProfiles() {
               const photos = Array.isArray(selectedProfile.photos)
                 ? selectedProfile.photos.filter(Boolean)
                 : [];
+
               const gallery = photos.length
                 ? photos
                 : [selectedProfile.image].filter(Boolean);
+
               const fallback = FALLBACK_PROFILE_IMAGE;
-              const mainPhoto = selectedPhoto || gallery[0] || fallback;
+              const mainPhoto =
+                selectedPhoto || gallery[0] || fallback;
 
               return (
                 <div className="discover-modal-photo-column">
@@ -1211,13 +1354,19 @@ export default function DiscoverProfiles() {
                       event.currentTarget.src = fallback;
                     }}
                   />
+
                   {gallery.length > 1 && (
-                    <div className="discover-modal-gallery" aria-label="Profile photos">
+                    <div
+                      className="discover-modal-gallery"
+                      aria-label="Profile photos"
+                    >
                       {gallery.map((photo, index) => (
                         <button
                           key={`${selectedProfile.id}-photo-${index}`}
                           type="button"
-                          className={`discover-photo-thumb ${mainPhoto === photo ? "active" : ""}`}
+                          className={`discover-photo-thumb ${
+                            mainPhoto === photo ? "active" : ""
+                          }`}
                           onClick={() => setSelectedPhoto(photo)}
                           aria-label={`Show photo ${index + 1}`}
                           aria-pressed={mainPhoto === photo}
@@ -1227,7 +1376,8 @@ export default function DiscoverProfiles() {
                             alt={`${selectedProfile.name} photo ${index + 1}`}
                             onError={(event) => {
                               event.currentTarget.onerror = null;
-                              event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+                              event.currentTarget.src =
+                                FALLBACK_PROFILE_IMAGE;
                             }}
                           />
                         </button>
@@ -1240,47 +1390,97 @@ export default function DiscoverProfiles() {
 
             <div className="discover-modal-content">
               <h2 id="dp-profile-title">
-                {selectedProfile.name}, {selectedProfile.age}
+                {selectedProfile.name}
+                {selectedProfile.age != null
+                  ? `, ${selectedProfile.age}`
+                  : ""}
               </h2>
 
-              <p><strong>Profession:</strong> {selectedProfile.profession}</p>
-              <p><strong>Education:</strong> {selectedProfile.education}</p>
-              <p><strong>Location:</strong> {selectedProfile.location}</p>
-              <p><strong>Category:</strong> {selectedProfile.category}</p>
-              <p><strong>Height:</strong> {selectedProfile.height}</p>
-              <p><strong>Looking for:</strong> {selectedProfile.gender === "Bride" ? "Groom" : selectedProfile.gender === "Groom" ? "Bride" : "Not specified"}</p>
+              <p>
+                <strong>Profession:</strong>{" "}
+                {selectedProfile.profession}
+              </p>
+
+              <p>
+                <strong>Education:</strong>{" "}
+                {selectedProfile.education}
+              </p>
+
+              <p>
+                <strong>Location:</strong>{" "}
+                {selectedProfile.location}
+              </p>
+
+              <p>
+                <strong>Category:</strong>{" "}
+                {selectedProfile.category}
+              </p>
+
+              <p>
+                <strong>Height:</strong>{" "}
+                {selectedProfile.height || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Looking for:</strong>{" "}
+                {selectedProfile.gender === "Bride"
+                  ? "Groom"
+                  : selectedProfile.gender === "Groom"
+                    ? "Bride"
+                    : "Not specified"}
+              </p>
+
               <p>{selectedProfile.about}</p>
-              {Array.isArray(selectedProfile.photos) && selectedProfile.photos.length > 1 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                  {selectedProfile.photos.map((photo, index) => (
-                    <button
-                      key={`${selectedProfile.id}-photo-${index}`}
-                      type="button"
-                      onClick={() => setSelectedPhoto(photo)}
-                      aria-label={`View ${selectedProfile.name}'s photo ${index + 1}`}
-                      aria-pressed={selectedPhoto === photo}
-                      style={{
-                        padding: 0,
-                        border: selectedPhoto === photo ? "2px solid #c2185b" : "2px solid transparent",
-                        borderRadius: 10,
-                        background: "transparent",
-                        cursor: "pointer",
-                        lineHeight: 0,
-                      }}
-                    >
-                      <img
-                        src={photo}
-                        alt={`${selectedProfile.name} photo ${index + 1}`}
-                        onError={(event) => {
-                          event.currentTarget.onerror = null;
-                          event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+
+              {Array.isArray(selectedProfile.photos) &&
+                selectedProfile.photos.length > 1 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      marginTop: 12,
+                    }}
+                  >
+                    {selectedProfile.photos.map((photo, index) => (
+                      <button
+                        key={`${selectedProfile.id}-photo-${index}`}
+                        type="button"
+                        onClick={() => setSelectedPhoto(photo)}
+                        aria-label={`View ${selectedProfile.name}'s photo ${index + 1}`}
+                        aria-pressed={selectedPhoto === photo}
+                        style={{
+                          padding: 0,
+                          border:
+                            selectedPhoto === photo
+                              ? "2px solid #c2185b"
+                              : "2px solid transparent",
+                          borderRadius: 10,
+                          background: "transparent",
+                          cursor: "pointer",
+                          lineHeight: 0,
                         }}
-                        style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, display: "block" }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
+                      >
+                        <img
+                          src={photo}
+                          alt={`${selectedProfile.name} photo ${index + 1}`}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src =
+                              FALLBACK_PROFILE_IMAGE;
+                          }}
+                          style={{
+                            width: 72,
+                            height: 72,
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            display: "block",
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
 
               <div className="discover-modal-actions">
                 <Link
