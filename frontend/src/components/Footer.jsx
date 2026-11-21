@@ -191,7 +191,7 @@ export default function Footer() {
           border: 1px solid rgba(255,255,255,0.18);
           border-radius: 30px;
           background: rgba(255,255,255,0.08);
-          color: #a564ec;
+          color: #c4a3ff;
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 0.4px;
@@ -221,7 +221,7 @@ export default function Footer() {
           width: 38px;
           height: 3px;
           border-radius: 5px;
-          background: linear-gradient(90deg, #3708f4, #f0abfc);
+          background: linear-gradient(90deg, #8b5cf6, #f0abfc);
           content: "";
           transition: width 0.3s ease;
         }
@@ -230,46 +230,88 @@ export default function Footer() {
           width: 75px;
         }
 
-        /* Footer links */
-        .footer-links {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          margin: 0;
-          padding: 0;
-          list-style: none;
+        /* Transparent glass navigation panels */
+        .wowmate-footer .footer-column nav {
+          display: block;
+          width: 100%;
+          padding: 17px 18px;
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 16px;
+          background: rgba(255,255,255,0.055) !important;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          transition: border-color 0.3s ease,
+            background 0.3s ease, transform 0.3s ease;
         }
 
-        .footer-links a {
+        .wowmate-footer .footer-column nav:hover {
+          border-color: rgba(196,181,253,0.4);
+          background: rgba(255,255,255,0.09) !important;
+          transform: translateY(-2px);
+        }
+
+        /* Footer links */
+        .wowmate-footer .footer-links {
+          display: flex !important;
+          flex-direction: column;
+          gap: 14px;
+          width: 100%;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          list-style: none !important;
+        }
+
+        .wowmate-footer .footer-links li {
+          display: block;
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          border: 0;
+          background: transparent !important;
+          list-style: none !important;
+        }
+
+        .wowmate-footer .footer-links a {
           display: inline-flex;
           align-items: center;
-          gap: 9px;
+          gap: 10px;
           width: fit-content;
-          color: #7646dd;
+          max-width: 100%;
+          padding: 2px 0;
+          background: transparent !important;
+          color: #eee7ff !important;
           font-size: 13px;
           font-weight: 500;
           text-decoration: none;
           transition: color 0.25s ease, transform 0.25s ease;
         }
 
-        .footer-links a::before {
-          width: 6px;
-          height: 6px;
+        .wowmate-footer .footer-links a::before {
+          width: 7px;
+          height: 7px;
           flex-shrink: 0;
           border-radius: 50%;
-          background: #a78bfa;
+          background: #c4b5fd;
           content: "";
-          transition: transform 0.25s ease, background 0.25s ease;
+          box-shadow: 0 0 10px rgba(196,181,253,0.35);
+          transition: transform 0.25s ease,
+            background 0.25s ease, box-shadow 0.25s ease;
         }
 
-        .footer-links a:hover {
-          color: #fff;
+        .wowmate-footer .footer-links a:hover {
+          color: #fff !important;
           transform: translateX(6px);
         }
 
-        .footer-links a:hover::before {
+        .wowmate-footer .footer-links a:hover::before {
           transform: scale(1.5);
           background: #f0abfc;
+          box-shadow: 0 0 13px rgba(240,171,252,0.8);
         }
 
         /* Call to action */
@@ -285,7 +327,7 @@ export default function Footer() {
           background: linear-gradient(
             110deg,
             rgba(255,255,255,0.12),
-            rgba(239, 40, 40, 0.04)
+            rgba(255,255,255,0.04)
           );
           backdrop-filter: blur(12px);
           animation: footerFadeUp 1.1s ease both;
@@ -293,7 +335,7 @@ export default function Footer() {
 
         .footer-cta h3 {
           margin: 0 0 7px;
-          color: #e9e5e5;
+          color: #fff;
           font-size: 21px;
         }
 
@@ -314,7 +356,7 @@ export default function Footer() {
           border: 1px solid #f2e5e5;
           border-radius: 30px;
           background: #fff;
-          color: #a173f1;
+          color: #7c3aed;
           font-size: 13px;
           font-weight: 800;
           text-decoration: none;
@@ -343,7 +385,7 @@ export default function Footer() {
         }
 
         .footer-bottom-brand {
-          color: #ededed;
+          color: #fff;
           font-weight: 800;
         }
 
@@ -385,11 +427,15 @@ export default function Footer() {
             font-size: 15px;
           }
 
-          .footer-links {
+          .wowmate-footer .footer-column nav {
+            padding: 14px 12px;
+          }
+
+          .wowmate-footer .footer-links {
             gap: 13px;
           }
 
-          .footer-links a {
+          .wowmate-footer .footer-links a {
             font-size: 12px;
           }
 
@@ -521,9 +567,11 @@ export default function Footer() {
         {/* Copyright */}
         <div className="footer-bottom">
           <p>
-            © {CURRENT_YEAR} <span className="footer-bottom-brand">
+            © {CURRENT_YEAR}{" "}
+            <span className="footer-bottom-brand">
               Wowmate
-            </span>. All rights reserved.
+            </span>
+            . All rights reserved.
           </p>
 
           <p>Made with ♥ for beautiful relationships.</p>
