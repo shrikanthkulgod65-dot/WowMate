@@ -95,6 +95,11 @@ function normalizeProfile(profile) {
     education: profile.education || "Not specified",
     category,
     gender,
+
+    // NEW: Religion and community from registration
+    religion: profile.religion || "",
+    community: profile.community || "",
+
     image,
   };
 }
@@ -129,6 +134,10 @@ function buildSearchQuery(searchParams) {
   const profession = searchParams.get("profession");
   const location = searchParams.get("location");
 
+  // NEW: Religion and community filters
+  const religion = searchParams.get("religion");
+  const community = searchParams.get("community");
+
   if (minAge) params.set("minAge", minAge);
   if (maxAge) params.set("maxAge", maxAge);
 
@@ -153,6 +162,16 @@ function buildSearchQuery(searchParams) {
 
   if (location) {
     params.set("city", location);
+  }
+
+  // Send religion to backend
+  if (religion) {
+    params.set("religion", religion);
+  }
+
+  // Send community to backend
+  if (community) {
+    params.set("community", community);
   }
 
   params.set("page", searchParams.get("page") || "1");
@@ -183,6 +202,7 @@ export default function SearchResults() {
         const token =
           localStorage.getItem("token") ||
           sessionStorage.getItem("token");
+
         const response = await fetch(
           `${API_BASE_URL}/profile/search?${searchQuery}`,
           {
@@ -229,6 +249,7 @@ export default function SearchResults() {
 
         setProfiles([]);
         setTotalProfiles(null);
+
         setError(
           err.message ||
             "Unable to load profiles. Please try again."
@@ -252,15 +273,23 @@ export default function SearchResults() {
 
   const filteredProfiles = useMemo(() => {
     const category = normalize(searchParams.get("category"));
+
     const lookingFor = normalize(
       searchParams.get("lookingFor") || "Bride"
     );
+
     const minAge = Number(searchParams.get("minAge") || 18);
     const maxAge = Number(searchParams.get("maxAge") || 40);
+
     const profession = normalize(
       searchParams.get("profession") || "Any Profession"
     );
+
     const location = normalize(searchParams.get("location"));
+
+    // NEW: Selected religion and community
+    const religion = normalize(searchParams.get("religion"));
+    const community = normalize(searchParams.get("community"));
 
     return profiles.filter((profile) => {
       const profileCategory = normalize(profile.category);
@@ -289,12 +318,24 @@ export default function SearchResults() {
         (lookingFor === "bride" && profileGender === "bride") ||
         (lookingFor === "groom" && profileGender === "groom");
 
+      // NEW: Match registered religion
+      const matchesReligion =
+        !religion ||
+        normalize(profile.religion) === religion;
+
+      // NEW: Match registered caste/community
+      const matchesCommunity =
+        !community ||
+        normalize(profile.community) === community;
+
       return (
         matchesCategory &&
         matchesAge &&
         matchesProfession &&
         matchesLocation &&
-        matchesLookingFor
+        matchesLookingFor &&
+        matchesReligion &&
+        matchesCommunity
       );
     });
   }, [profiles, searchParams]);
@@ -461,6 +502,22 @@ export default function SearchResults() {
                   <p style={{ margin: "0 0 12px", color: "#5f4961" }}>
                     Education: {profile.education}
                   </p>
+
+                  {/* NEW: Show registered religion and community */}
+
+                  {(profile.religion || profile.community) && (
+                    <p
+                      style={{
+                        margin: "0 0 12px",
+                        color: "#5f4961",
+                      }}
+                    >
+                      {profile.religion || "Religion not specified"}
+                      {profile.community
+                        ? ` · ${profile.community}`
+                        : ""}
+                    </p>
+                  )}
 
                   <span
                     style={{

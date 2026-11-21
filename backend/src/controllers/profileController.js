@@ -8,6 +8,7 @@ function parseInteger(value, fallback, minimum, maximum) {
   if (value === undefined || value === "") return fallback;
 
   const parsed = Number(value);
+
   return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
     ? parsed
     : null;
@@ -68,9 +69,7 @@ export const updateMyProfile = async (req, res) => {
     const updates = {};
 
     for (const field of allowedFields) {
-      if (
-        Object.prototype.hasOwnProperty.call(req.body, field)
-      ) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
         updates[field] = req.body[field];
       }
     }
@@ -126,8 +125,7 @@ export const updateMyProfile = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Minimum preferred age cannot exceed maximum age.",
+        message: "Minimum preferred age cannot exceed maximum age.",
       });
     }
 
@@ -161,9 +159,7 @@ export const updateMyProfile = async (req, res) => {
         success: false,
         message: "Invalid profile information.",
         errors: error.errors
-          ? Object.values(error.errors).map(
-              (item) => item.message
-            )
+          ? Object.values(error.errors).map((item) => item.message)
           : [error.message],
       });
     }
@@ -215,8 +211,12 @@ export const searchProfiles = async (req, res) => {
   const limit = parseInteger(req.query.limit, 12, 1, 50);
   const minAge = parseInteger(req.query.minAge, null, 18, 100);
   const maxAge = parseInteger(req.query.maxAge, null, 18, 100);
-  const hasMinAge = req.query.minAge !== undefined && req.query.minAge !== "";
-  const hasMaxAge = req.query.maxAge !== undefined && req.query.maxAge !== "";
+
+  const hasMinAge =
+    req.query.minAge !== undefined && req.query.minAge !== "";
+
+  const hasMaxAge =
+    req.query.maxAge !== undefined && req.query.maxAge !== "";
 
   if (
     page === null ||
@@ -232,7 +232,9 @@ export const searchProfiles = async (req, res) => {
   }
 
   const query = { user: { $ne: req.user.id } };
+
   const gender = String(req.query.gender || "").trim().toLowerCase();
+
   const genderValues = {
     female: "Female",
     bride: "Female",
@@ -248,10 +250,13 @@ export const searchProfiles = async (req, res) => {
     });
   }
 
-  if (gender) query.gender = genderValues[gender];
+  if (gender) {
+    query.gender = genderValues[gender];
+  }
 
   const occupation = String(req.query.occupation || "").trim();
   const category = String(req.query.category || "").trim().toLowerCase();
+
   const occupationFilters = [];
 
   if (occupation && occupation.toLowerCase() !== "any profession") {
@@ -267,7 +272,9 @@ export const searchProfiles = async (req, res) => {
       $options: "i",
     });
   } else if (category === "professional") {
-    occupationFilters.push({ $not: /farmer|agricultur/i });
+    occupationFilters.push({
+      $not: /farmer|agricultur/i,
+    });
   } else if (category) {
     return res.status(400).json({
       success: false,
@@ -284,8 +291,12 @@ export const searchProfiles = async (req, res) => {
   }
 
   const city = String(req.query.city || "").trim();
+
   if (city) {
-    query.city = { $regex: escapeRegex(city), $options: "i" };
+    query.city = {
+      $regex: escapeRegex(city),
+      $options: "i",
+    };
   }
 
   if (minAge !== null || maxAge !== null) {
@@ -294,13 +305,17 @@ export const searchProfiles = async (req, res) => {
 
     if (minAge !== null) {
       const youngestBirthDate = new Date(today);
-      youngestBirthDate.setFullYear(today.getFullYear() - minAge);
+      youngestBirthDate.setFullYear(
+        today.getFullYear() - minAge
+      );
       dateOfBirth.$lte = youngestBirthDate;
     }
 
     if (maxAge !== null) {
       const oldestBirthDate = new Date(today);
-      oldestBirthDate.setFullYear(today.getFullYear() - maxAge - 1);
+      oldestBirthDate.setFullYear(
+        today.getFullYear() - maxAge - 1
+      );
       dateOfBirth.$gt = oldestBirthDate;
     }
 
@@ -317,10 +332,13 @@ export const searchProfiles = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
+
       Profile.countDocuments(query),
     ]);
 
-    const registeredProfiles = profiles.filter((profile) => profile.user);
+    const registeredProfiles = profiles.filter(
+      (profile) => profile.user
+    );
 
     return res.status(200).json({
       success: true,
@@ -379,6 +397,51 @@ export const getPublicProfiles = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to retrieve public profiles.",
+    });
+  }
+};
+
+// POST /api/profile/me/photo
+// Upload the logged-in user's profile photo to Cloudinary.
+export const uploadMyProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a profile photo.",
+      });
+    }
+
+    const profile = await Profile.findOneAndUpdate(
+      { user: req.user.id },
+      {
+        $set: {
+          profilePhoto: req.file.path,
+        },
+        $setOnInsert: {
+          user: req.user.id,
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    ).populate("user", "fullName email");
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile photo uploaded successfully.",
+      profilePhoto: req.file.path,
+      profile,
+    });
+  } catch (error) {
+    console.error("Profile photo upload error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to upload profile photo.",
     });
   }
 };

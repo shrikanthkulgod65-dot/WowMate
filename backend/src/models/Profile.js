@@ -94,6 +94,7 @@ const profileSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Stores the Cloudinary profile photo URL.
     profilePhoto: {
       type: String,
       default: "",

@@ -49,43 +49,6 @@ import {
 const MAX_DATE_OF_BIRTH = new Date().toISOString().split("T")[0];
 const REGISTERED_PROFILES_KEY = "apnishaadi_registered_profiles";
 
-async function prepareProfilePhoto(file) {
-  const image = new Image();
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error("Unable to read one of your photos."));
-      image.src = objectUrl;
-    });
-
-    const maxDimension = 640;
-    const scale = Math.min(
-      1,
-      maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
-    );
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Unable to process one of your photos.");
-    }
-
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    return canvas.toDataURL("image/jpeg", 0.72);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
-
-
-
 const RELIGION_COMMUNITIES = {
   Hindu: [
     "Brahmin", "Kshatriya / Rajput", "Vaishya", "Reddy", "Lingayat",
@@ -615,10 +578,10 @@ export default function Register() {
     if (!validateStep()) return;
 
     setError("");
+    setProfileSaved(false);
+
     try {
-      const photos = await Promise.all(
-        userPhotos.map(({ file }) => prepareProfilePhoto(file))
-      );
+      // 1. Create the user account.
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -631,166 +594,211 @@ export default function Register() {
           accountType: formData.accountType,
           role: formData.accountType === "broker" ? "broker" : "user",
           mobile: formData.mobile.trim(),
-          ...(formData.accountType === "broker" ? {
-            brokerDetails: {
-              businessName: formData.brokerBusinessName.trim(),
-              experienceYears: Number(formData.brokerExperience),
-              city: formData.brokerCity.trim(),
-              serviceArea: formData.brokerServiceArea.trim(),
-              about: formData.brokerAbout.trim(),
-            },
-          } : {}),
+          ...(formData.accountType === "broker"
+            ? {
+                brokerDetails: {
+                  businessName: formData.brokerBusinessName.trim(),
+                  experienceYears: Number(formData.brokerExperience),
+                  city: formData.brokerCity.trim(),
+                  serviceArea: formData.brokerServiceArea.trim(),
+                  about: formData.brokerAbout.trim(),
+                },
+              }
+            : {}),
         }),
       });
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(result.message || "Registration failed. Please try again.");
+        throw new Error(
+          result.message || "Registration failed. Please try again."
+        );
       }
 
-      if (formData.accountType === "matrimony") {
-        const profile = {
-          id: `member-${result.user?.id || Date.now()}`,
-          name: formData.fullName.trim(),
-          age: calculateAge(formData.dateOfBirth),
-          gender:
-            formData.gender === "Female"
-              ? "Bride"
-              : formData.gender === "Male"
-                ? "Groom"
-                : "Other",
-          profession: formData.profession,
-          education: formData.education,
-          location: [formData.city, formData.state, formData.country]
-            .filter(Boolean)
-            .join(", "),
-          category: /farmer|agricultur/i.test(formData.profession)
-            ? "Farmer"
-            : "Professional",
-          height: formData.height,
-          image: photos[0] || "",
-          photos,
-          about:
-            formData.partnerExpectations.trim() ||
-            [formData.lifestyle, formData.familyValues]
-              .filter(Boolean)
-              .join(" · ") ||
-            "Wowmate member",
-          maritalStatus: formData.maritalStatus,
-          religion: formData.religion === "Other"
-            ? formData.otherReligion.trim()
-            : formData.religion,
-          community: formData.community === "Other"
-            ? formData.otherCommunity.trim()
-            : formData.community,
-          annualIncome: formData.annualIncome,
-          interests: formData.interests,
-          profileFor: formData.profileFor,
-        };
-
-        try {
-          const storedProfiles = localStorage.getItem(REGISTERED_PROFILES_KEY);
-          const profiles = storedProfiles ? JSON.parse(storedProfiles) : [];
-
-          if (!Array.isArray(profiles)) {
-            throw new Error("Saved profile list is not in a valid format.");
-          }
-
-          localStorage.setItem(
-            REGISTERED_PROFILES_KEY,
-            JSON.stringify([
-              ...profiles.filter((existing) => existing.id !== profile.id),
-              profile,
-            ])
-          );
-          window.dispatchEvent(new Event("apnishaadi-profiles-updated"));
-          setProfileSaved(true);
-        } catch (storageError) {
-          console.error("Unable to add registered profile to Explore:", storageError);
-          setProfileSaved(false);
-          setError(
-            "Your account was created, but your profile could not be added to Explore on this browser. Check available browser storage and try again."
-          );
-        }
-
-      } else {
-        setProfileSaved(false);
-      }
-
+      // Preserve the existing broker registration and login flow.
       if (formData.accountType === "broker") {
-        navigate(`/login?identifier=${encodeURIComponent(formData.email.trim().toLowerCase())}`, {
-          replace: true,
-        });
+        navigate(
+          `/login?identifier=${encodeURIComponent(
+            formData.email.trim().toLowerCase()
+          )}`,
+          { replace: true }
+        );
         return;
       }
 
-      // Registration now returns a JWT. Save it so the new member is signed in.
+      // Registration must return a JWT for the new member session.
       if (!result.token) {
         throw new Error(
           "Your account was created, but the login token was not returned. Please log in."
         );
       }
 
+      // 2. Save authentication details.
       localStorage.setItem("token", result.token);
       if (result.user) {
         localStorage.setItem("user", JSON.stringify(result.user));
       }
+      window.dispatchEvent(new Event("authChanged"));
 
-      try {
-        const profileResponse = await fetch("/api/profile/me", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${result.token}`,
-          },
-          body: JSON.stringify({
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            religion: formData.religion === "Other"
+      // 3. Save matrimonial profile details. The profile photo is deliberately
+      // omitted here; it is uploaded separately as multipart FormData below.
+      const profileResponse = await fetch("/api/profile/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${result.token}`,
+        },
+        body: JSON.stringify({
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender,
+          religion:
+            formData.religion === "Other"
               ? formData.otherReligion.trim()
               : formData.religion,
-            community: formData.community === "Other"
+          community:
+            formData.community === "Other"
               ? formData.otherCommunity.trim()
               : formData.community,
-            maritalStatus: formData.maritalStatus,
-            height: formData.height,
-            education: formData.education,
-            occupation: formData.profession,
-            annualIncome: formData.annualIncome,
-            country: formData.country,
-            state: formData.state,
-            city: formData.city,
-            profilePhoto: photos[0] || "",
-            partnerPreferences: {
-              minAge: Number(formData.partnerAgeMin),
-              maxAge: Number(formData.partnerAgeMax),
-              preferredCity: formData.partnerLocation,
-              preferredEducation: formData.partnerEducation,
-              preferredOccupation: formData.partnerProfession,
-            },
-          }),
-        });
-        const profileResult = await profileResponse.json().catch(() => ({}));
+          maritalStatus: formData.maritalStatus,
+          height: formData.height,
+          education: formData.education,
+          occupation: formData.profession,
+          annualIncome: formData.annualIncome,
+          country: formData.country,
+          state: formData.state,
+          city: formData.city,
+          partnerPreferences: {
+            minAge: Number(formData.partnerAgeMin),
+            maxAge: Number(formData.partnerAgeMax),
+            preferredCity: formData.partnerLocation,
+            preferredEducation: formData.partnerEducation,
+            preferredOccupation: formData.partnerProfession,
+          },
+        }),
+      });
 
-        if (!profileResponse.ok) {
-          throw new Error(
+      const profileResult = await profileResponse.json().catch(() => ({}));
+      if (!profileResponse.ok) {
+        throw new Error(
+          `Your account was created, but your profile could not be saved: ${
             profileResult.message || "Please try again from your profile page."
+          }`
+        );
+      }
+
+      // 4. Upload the first selected photo to Cloudinary.
+      // This matches the backend route: POST /api/profile/me/photo
+      // with profilePhotoUpload.single("photo").
+      let cloudinaryPhotoUrl = "";
+
+      if (userPhotos.length > 0) {
+        const photoFormData = new FormData();
+        photoFormData.append("photo", userPhotos[0].file);
+
+        const photoResponse = await fetch("/api/profile/me/photo", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${result.token}`,
+          },
+          // Do not set Content-Type manually; the browser adds the multipart boundary.
+          body: photoFormData,
+        });
+
+        const photoResult = await photoResponse.json().catch(() => ({}));
+        if (!photoResponse.ok) {
+          throw new Error(
+            `Your account and profile were created, but the photo could not be uploaded: ${
+              photoResult.message || "Please try again from your profile page."
+            }}`
           );
         }
-      } catch (profileError) {
-        window.dispatchEvent(new Event("authChanged"));
-        setError(
-          `Your account was created, but your profile could not be saved: ${profileError.message}`
+
+        cloudinaryPhotoUrl =
+          photoResult.profilePhoto || photoResult.profile?.profilePhoto || "";
+
+        if (!cloudinaryPhotoUrl) {
+          throw new Error(
+            "The photo upload completed, but the server did not return a Cloudinary photo URL."
+          );
+        }
+      }
+
+      // 5. Preserve the existing local Explore Profiles registration record.
+      const profile = {
+        id: `member-${result.user?.id || Date.now()}`,
+        name: formData.fullName.trim(),
+        age: calculateAge(formData.dateOfBirth),
+        gender:
+          formData.gender === "Female"
+            ? "Bride"
+            : formData.gender === "Male"
+              ? "Groom"
+              : "Other",
+        profession: formData.profession,
+        education: formData.education,
+        location: [formData.city, formData.state, formData.country]
+          .filter(Boolean)
+          .join(", "),
+        category: /farmer|agricultur/i.test(formData.profession)
+          ? "Farmer"
+          : "Professional",
+        height: formData.height,
+        image: cloudinaryPhotoUrl,
+        photos: cloudinaryPhotoUrl ? [cloudinaryPhotoUrl] : [],
+        about:
+          formData.partnerExpectations.trim() ||
+          [formData.lifestyle, formData.familyValues]
+            .filter(Boolean)
+            .join(" · ") ||
+          "Wowmate member",
+        maritalStatus: formData.maritalStatus,
+        religion:
+          formData.religion === "Other"
+            ? formData.otherReligion.trim()
+            : formData.religion,
+        community:
+          formData.community === "Other"
+            ? formData.otherCommunity.trim()
+            : formData.community,
+        annualIncome: formData.annualIncome,
+        interests: formData.interests,
+        profileFor: formData.profileFor,
+      };
+
+      try {
+        const storedProfiles = localStorage.getItem(REGISTERED_PROFILES_KEY);
+        const profiles = storedProfiles ? JSON.parse(storedProfiles) : [];
+
+        if (!Array.isArray(profiles)) {
+          throw new Error("Saved profile list is not in a valid format.");
+        }
+
+        localStorage.setItem(
+          REGISTERED_PROFILES_KEY,
+          JSON.stringify([
+            ...profiles.filter((existing) => existing.id !== profile.id),
+            profile,
+          ])
         );
-        return;
+
+        window.dispatchEvent(new Event("apnishaadi-profiles-updated"));
+        setProfileSaved(true);
+      } catch (storageError) {
+        console.error(
+          "Unable to add registered profile to Explore:",
+          storageError
+        );
+        setProfileSaved(false);
+        throw new Error(
+          "Your account and profile were created, but your profile could not be added to Explore on this browser. Check available browser storage."
+        );
       }
 
       window.dispatchEvent(new Event("authChanged"));
-
-      // Matrimony members go straight to Discover Profiles after registration.
       navigate("/discover-profiles", { replace: true });
     } catch (err) {
+      console.error("Wowmate registration error:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -798,7 +806,6 @@ export default function Register() {
       );
     }
   };
-
 
 
   const interestsList = [

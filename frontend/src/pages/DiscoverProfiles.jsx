@@ -18,6 +18,40 @@ const defaultFilters = {
   location: "",
 };
 
+
+const FALLBACK_PROFILE_IMAGE =
+  "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate";
+
+// Cloudinary normally returns a URL string in profilePhoto. This helper also
+// accepts common object shapes so older and newer API responses both work.
+const getPhotoUrl = (photo) => {
+  if (typeof photo === "string") return photo.trim();
+  if (!photo || typeof photo !== "object") return "";
+
+  return String(
+    photo.secure_url || photo.url || photo.path || photo.src || ""
+  ).trim();
+};
+
+const getProfilePhotos = (profile, user) => {
+  const values = [
+    profile?.profilePhoto,
+    profile?.photo,
+    profile?.profile?.profilePhoto,
+    user?.profilePhoto,
+    profile?.photos,
+    profile?.gallery,
+    user?.photos,
+  ];
+
+  return [...new Set(
+    values
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .map(getPhotoUrl)
+      .filter(Boolean)
+  )];
+};
+
 export default function DiscoverProfiles() {
   const [filters, setFilters] = useState(defaultFilters);
   const [sortBy, setSortBy] = useState("recommended");
@@ -102,6 +136,7 @@ export default function DiscoverProfiles() {
 
             const user =
               rawUser && typeof rawUser === "object" ? rawUser : {};
+            const profilePhotos = getProfilePhotos(item, user);
             const dob = item.dateOfBirth ? new Date(item.dateOfBirth) : null;
             let age = null;
 
@@ -141,9 +176,10 @@ export default function DiscoverProfiles() {
               location: location || "Location not specified",
               category,
               height: item.height || "",
-              image: item.profilePhoto || "",
-              photos: item.profilePhoto ? [item.profilePhoto] : [],
-              about: item.aboutMe || "",
+              // Profile photos are Cloudinary URLs saved by the backend upload route.
+              image: profilePhotos[0] || "",
+              photos: profilePhotos,
+              about: item.aboutMe || item.about || "",
               isBackendProfile: true,
             };
           })
@@ -161,8 +197,18 @@ export default function DiscoverProfiles() {
     };
 
     loadBackendProfiles();
+
+    // Re-fetch when registration/login or a profile update completes in this tab.
+    window.addEventListener("authChanged", loadBackendProfiles);
+    window.addEventListener("apnishaadi-profiles-updated", loadBackendProfiles);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("authChanged", loadBackendProfiles);
+      window.removeEventListener(
+        "apnishaadi-profiles-updated",
+        loadBackendProfiles
+      );
     };
   }, []);
 
@@ -1006,9 +1052,13 @@ export default function DiscoverProfiles() {
                   <div className="discover-image-wrap">
                     <img
                       className="discover-image"
-                      src={profile.image || profile.photos?.[0] || "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate"}
+                      src={profile.image || profile.photos?.[0] || FALLBACK_PROFILE_IMAGE}
                       alt={`Profile photo of ${profile.name}`}
                       loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+                      }}
                     />
 
                     <span className="discover-badge">
@@ -1060,7 +1110,7 @@ export default function DiscoverProfiles() {
                         className="discover-view"
                         onClick={() => {
                           setSelectedProfile(profile);
-                          setSelectedPhoto(profile.image || profile.photos?.[0] || "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate");
+                          setSelectedPhoto(profile.image || profile.photos?.[0] || FALLBACK_PROFILE_IMAGE);
                         }}
                       >
                         View Details
@@ -1147,8 +1197,7 @@ export default function DiscoverProfiles() {
               const gallery = photos.length
                 ? photos
                 : [selectedProfile.image].filter(Boolean);
-              const fallback =
-                "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate";
+              const fallback = FALLBACK_PROFILE_IMAGE;
               const mainPhoto = selectedPhoto || gallery[0] || fallback;
 
               return (
@@ -1173,7 +1222,14 @@ export default function DiscoverProfiles() {
                           aria-label={`Show photo ${index + 1}`}
                           aria-pressed={mainPhoto === photo}
                         >
-                          <img src={photo} alt={`${selectedProfile.name} photo ${index + 1}`} />
+                          <img
+                            src={photo}
+                            alt={`${selectedProfile.name} photo ${index + 1}`}
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+                            }}
+                          />
                         </button>
                       ))}
                     </div>
@@ -1215,6 +1271,10 @@ export default function DiscoverProfiles() {
                       <img
                         src={photo}
                         alt={`${selectedProfile.name} photo ${index + 1}`}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = FALLBACK_PROFILE_IMAGE;
+                        }}
                         style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, display: "block" }}
                       />
                     </button>

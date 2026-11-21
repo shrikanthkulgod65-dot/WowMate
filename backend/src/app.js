@@ -1,7 +1,8 @@
 
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import connectDB from "./config/db.js";
 import interestRoutes from "./routes/interestRoutes.js";
@@ -16,29 +17,35 @@ import {
   notFoundMiddleware,
 } from "./middleware/errorMiddleware.js";
 
-dotenv.config();
-
 const app = express();
 
 // CORS configuration
 const allowedOrigins = [
   "http://wowmate.co.in",
+  "https://wowmate.co.in",
+  "https://www.wowmate.co.in",
+  "http://localhost:5173",
   "http://127.0.0.1:5173",
   process.env.CLIENT_URL,
-].filter(Boolean);
+]
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/+$/, ""));
 
 app.use(
   cors({
     origin(origin, callback) {
       // Allow native apps and requests without an Origin header.
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ""))) {
         return callback(null, true);
       }
 
       return callback(new Error("Origin not allowed by CORS"));
     },
+
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+
     allowedHeaders: ["Content-Type", "Authorization"],
+
     credentials: true,
   })
 );
@@ -47,14 +54,16 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Ensure MongoDB is connected before every API request (required for Vercel serverless).
+// Ensure MongoDB is connected before every API request.
+// This also supports Vercel serverless deployments.
 app.use(async (req, res, next) => {
   try {
     await connectDB();
-    next();
+    return next();
   } catch (error) {
     console.error("DB connection error:", error.message);
-    res.status(503).json({
+
+    return res.status(503).json({
       success: false,
       message: "Service temporarily unavailable. Please try again.",
     });

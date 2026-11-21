@@ -1,10 +1,67 @@
+
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+// Religion and community options matching Register.jsx
+const RELIGION_COMMUNITIES = {
+  Hindu: [
+    "Brahmin", "Kshatriya / Rajput", "Vaishya", "Reddy",
+    "Lingayat", "Vokkaliga", "Maratha", "Jat", "Yadav",
+    "Kurmi", "Patel / Patidar", "Nair", "Ezhava", "Kamma",
+    "Kapu", "Velama", "Gounder", "Thevar", "Chettiar",
+    "Mudaliar", "Naidu", "Bania", "Agarwal", "Kayastha",
+    "Khatri", "Arora", "Gurjar", "Other"
+  ],
+  Muslim: [
+    "Sunni", "Shia", "Syed", "Sheikh", "Pathan", "Qureshi",
+    "Ansari", "Memon", "Bohra", "Khoja", "Mappila", "Other"
+  ],
+  Christian: [
+    "Roman Catholic", "Latin Catholic", "Syrian Catholic",
+    "Syrian Orthodox", "Jacobite", "Marthoma", "Protestant",
+    "Pentecostal", "CSI", "CNI", "Other"
+  ],
+  Sikh: [
+    "Jat Sikh", "Khatri", "Arora", "Ramgarhia", "Ahluwalia",
+    "Saini", "Mazhabi Sikh", "Other"
+  ],
+  Buddhist: [
+    "Navayana", "Theravada", "Mahayana", "Vajrayana",
+    "Tibetan Buddhist", "Other"
+  ],
+  Jain: [
+    "Digambar", "Shwetambar", "Sthanakvasi",
+    "Terapanthi", "Oswal", "Other"
+  ],
+  Jewish: [
+    "Bene Israel", "Baghdadi Jewish", "Cochin Jewish", "Other"
+  ],
+  "Zoroastrian (Parsi)": [
+    "Parsi", "Irani Zoroastrian", "Other"
+  ],
+  "Baháʼí": ["Baháʼí", "Other"],
+  "Indigenous / Tribal faith": [
+    "Gond", "Santhal", "Bhil", "Munda", "Oraon", "Other"
+  ],
+  Sanamahism: ["Meitei", "Other"],
+  "Sarna faith": [
+    "Sarna", "Adivasi / Tribal community", "Other"
+  ],
+  "Donyi-Polo": [
+    "Adi", "Apatani", "Nyishi", "Galo", "Other"
+  ],
+  "Nature worship / Other indigenous faith": [
+    "Indigenous / Tribal community", "Other"
+  ],
+  "No religion": ["Not applicable"],
+  Other: ["Other"],
+  "Prefer not to say": ["Prefer not to say"]
+};
 
 export default function Home() {
   const navigate = useNavigate();
 
-  // Keep the Home page in sync with the login/logout events from Login.jsx.
+  // Keep the Home page in sync with login/logout events.
   const [homeUser, setHomeUser] = useState(null);
   const [homeProfile, setHomeProfile] = useState(null);
 
@@ -14,6 +71,7 @@ export default function Home() {
         const savedUser =
           window.localStorage.getItem("user") ||
           window.sessionStorage.getItem("user");
+
         const user = savedUser ? JSON.parse(savedUser) : null;
         setHomeUser(user);
 
@@ -25,7 +83,9 @@ export default function Home() {
         const savedProfiles = window.localStorage.getItem(
           "apnishaadi_registered_profiles"
         );
+
         const profiles = savedProfiles ? JSON.parse(savedProfiles) : [];
+
         const profile = Array.isArray(profiles)
           ? profiles.find(
               (item) =>
@@ -43,30 +103,43 @@ export default function Home() {
     };
 
     refreshHomeAccount();
+
     window.addEventListener("authChanged", refreshHomeAccount);
     window.addEventListener("storage", refreshHomeAccount);
-    window.addEventListener("apnishaadi-profiles-updated", refreshHomeAccount);
+    window.addEventListener(
+      "apnishaadi-profiles-updated",
+      refreshHomeAccount
+    );
 
     return () => {
       window.removeEventListener("authChanged", refreshHomeAccount);
       window.removeEventListener("storage", refreshHomeAccount);
-      window.removeEventListener("apnishaadi-profiles-updated", refreshHomeAccount);
+      window.removeEventListener(
+        "apnishaadi-profiles-updated",
+        refreshHomeAccount
+      );
     };
   }, []);
 
   const homeRole = String(homeUser?.role || "").toLowerCase();
-  const homeAction = homeRole === "broker"
-    ? { label: "My Broker Workspace →", link: "/broker-matrimony" }
-    : homeRole === "user"
-      ? {
-          label: homeProfile ? "View My Profile →" : "Complete Your Profile →",
-          link: "/dashboard",
-        }
-      : { label: "Create Your Profile →", link: "/register" };
+
+  const homeAction =
+    homeRole === "broker"
+      ? { label: "My Broker Workspace →", link: "/broker-matrimony" }
+      : homeRole === "user"
+        ? {
+            label: homeProfile
+              ? "View My Profile →"
+              : "Complete Your Profile →",
+            link: "/dashboard",
+          }
+        : { label: "Create Your Profile →", link: "/register" };
 
   const [search, setSearch] = useState({
     category: "",
     lookingFor: "",
+    religion: "",
+    community: "",
     minAge: "21",
     maxAge: "35",
   });
@@ -328,7 +401,7 @@ export default function Home() {
 
         .as-search-grid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
           align-items: end;
         }
@@ -353,6 +426,17 @@ export default function Home() {
         .as-field select:focus {
           outline: 2px solid #bd145533;
           border-color: var(--primary);
+        }
+
+        .as-field select:disabled {
+          background: #f7f5fa;
+          color: #999;
+          cursor: not-allowed;
+        }
+
+        .as-search-grid .as-btn {
+          width: 100%;
+          min-height: 46px;
         }
 
         /* CATEGORY CARDS */
@@ -775,6 +859,60 @@ export default function Home() {
                   </select>
                 </div>
 
+                {/* NEW: RELIGION FILTER */}
+
+                <div className="as-field">
+                  <label htmlFor="religion">Religion</label>
+
+                  <select
+                    id="religion"
+                    value={search.religion}
+                    onChange={(e) =>
+                      setSearch({
+                        ...search,
+                        religion: e.target.value,
+                        community: "",
+                      })
+                    }
+                  >
+                    <option value="">All Religions</option>
+
+                    {Object.keys(RELIGION_COMMUNITIES).map((religion) => (
+                      <option key={religion} value={religion}>
+                        {religion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* NEW: CASTE / COMMUNITY FILTER */}
+
+                <div className="as-field">
+                  <label htmlFor="community">Caste / Community</label>
+
+                  <select
+                    id="community"
+                    value={search.community}
+                    disabled={!search.religion}
+                    onChange={(e) =>
+                      setSearch({
+                        ...search,
+                        community: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">All Communities</option>
+
+                    {(RELIGION_COMMUNITIES[search.religion] || []).map(
+                      (community) => (
+                        <option key={community} value={community}>
+                          {community}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
                 <div className="as-field">
                   <label htmlFor="minAge">Minimum Age</label>
 
@@ -977,8 +1115,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-     
     </main>
   );
 }
