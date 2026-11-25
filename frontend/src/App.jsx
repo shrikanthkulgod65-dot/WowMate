@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 
 import {
   BrowserRouter,
@@ -48,14 +49,66 @@ function ComingSoon({ title }) {
   );
 }
 
-function RequireAuth({ children }) {
-  const token = localStorage.getItem("token");
+function RequireSubscription({ children, requiredFeature }) {
   const location = useLocation();
+  const [access, setAccess] = useState("checking");
 
-  if (!token) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function verifySubscription() {
+      const token =
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token");
+
+      if (!token) {
+        if (!cancelled) setAccess("blocked");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/subscription/me", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        const featureAllowed = requiredFeature
+          ? data.features?.[requiredFeature] === true
+          : data.features?.browsePublicProfiles === true;
+
+        if (!cancelled) {
+          setAccess(
+            response.ok && data.active === true && featureAllowed
+              ? "allowed"
+              : "blocked"
+          );
+        }
+      } catch (error) {
+        console.error("Subscription verification failed:", error);
+        if (!cancelled) setAccess("blocked");
+      }
+    }
+
+    verifySubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requiredFeature]);
+
+  if (access === "checking") {
+    return <main style={{ padding: 30, textAlign: "center" }}>Checking subscription access...</main>;
+  }
+
+  if (access !== "allowed") {
     return (
       <Navigate
-        to="/login"
+        to="/subscription-plans"
         replace
         state={{ from: location.pathname }}
       />
@@ -103,24 +156,24 @@ function AppRoutes() {
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/dashboard/my-profile" element={<MyProfile />} />
 
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="/search-results" element={<SearchResults />} />
+        <Route path="/search" element={<RequireSubscription requiredFeature="advancedFilters"><SearchResults /></RequireSubscription>} />
+        <Route path="/search-results" element={<RequireSubscription requiredFeature="advancedFilters"><SearchResults /></RequireSubscription>} />
 
         <Route
           path="/discover"
           element={
-            <RequireAuth>
+            <RequireSubscription>
               <DiscoverProfiles />
-            </RequireAuth>
+            </RequireSubscription>
           }
         />
 
         <Route
           path="/discover-profiles"
           element={
-            <RequireAuth>
+            <RequireSubscription>
               <DiscoverProfiles />
-            </RequireAuth>
+            </RequireSubscription>
           }
         />
 
@@ -165,3 +218,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

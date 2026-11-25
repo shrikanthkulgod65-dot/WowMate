@@ -61,6 +61,39 @@ const farmerProfiles = [
 export default function FarmerMatrimony() {
   const navigate = useNavigate();
 
+const handleProtectedProfileNavigation = async (event) => {
+    event.preventDefault();
+
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/subscription-plans");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/subscription/me", {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.active === true) {
+        navigate("/discover-profiles");
+      } else {
+        navigate("/subscription-plans");
+      }
+    } catch (error) {
+      console.error("Subscription verification failed:", error);
+      navigate("/subscription-plans");
+    }
+  };
+
   const [homeUser, setHomeUser] = useState(null);
   const [homeProfile, setHomeProfile] = useState(null);
 
@@ -770,10 +803,7 @@ export default function FarmerMatrimony() {
                     {profile.profession}
                   </span>
 
-                  <Link
-                    to="/login"
-                    className="farmer-profile-link"
-                  >
+                  <Link to="/subscription-plans" className="farmer-profile-link" onClick={handleProtectedProfileNavigation}>
                     View Profile <ArrowRight size={17} />
                   </Link>
                 </div>
@@ -782,7 +812,7 @@ export default function FarmerMatrimony() {
           </div>
 
           <div style={{ textAlign: "center", marginTop: 38 }}>
-            <Link to="/discover-profiles" className="farmer-btn">
+            <Link to="/subscription-plans" className="farmer-btn" onClick={handleProtectedProfileNavigation}>
               Explore More Profiles <ArrowRight size={18} />
             </Link>
           </div>
@@ -885,3 +915,4 @@ export default function FarmerMatrimony() {
     </main>
   );
 }
+

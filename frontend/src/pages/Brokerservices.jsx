@@ -279,13 +279,9 @@ export default function BrokerMatrimony() {
   // Contact numbers and biodata are visible only to logged-in users with an active subscription.
   const hasSubscription = isLoggedIn && hasActiveMatrimonySubscription();
 
-  function handleUnlockBrokerDetails() {
-    if (!isLoggedIn) {
-      navigate("/login");
-      return;
-    }
-    navigate("/subscription-plans");
-  }
+ function handleUnlockBrokerDetails() {
+  navigate("/subscription-plans");
+}
   const [activeTab, setActiveTab] = useState(isBroker ? "dashboard" : "find");
   const [brokers, setBrokers] = useState(() => {
     try {
@@ -357,7 +353,7 @@ export default function BrokerMatrimony() {
 
     async function loadBrokerDirectory() {
       try {
-        const response = await fetch("http://wowmate.co.in/api/broker/profiles");
+        const response = await fetch("/api/broker/profiles");
         const data = await response.json();
 
         if (!response.ok) {
@@ -422,7 +418,7 @@ export default function BrokerMatrimony() {
 
       try {
         setBrokerProfileLoading(true);
-        const response = await fetch("http://wowmate.co.in/api/broker/profile", {
+        const response = await fetch("/api/broker/profile", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -492,7 +488,7 @@ export default function BrokerMatrimony() {
     try {
       setBrokerProfileSaving(true);
       setNotice("");
-      const response = await fetch("http://wowmate.co.in/api/broker/profile", {
+      const response = await fetch("/api/broker/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -642,7 +638,7 @@ export default function BrokerMatrimony() {
     }
 
     try {
-      const response = await fetch("http://wowmate.co.in/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: brokerLoginForm.password }),
@@ -745,7 +741,7 @@ export default function BrokerMatrimony() {
     }
 
     try {
-      const response = await fetch("http://wowmate.co.in/api/auth/register-broker", {
+      const response = await fetch("/api/auth/register-broker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: name, email, password }),
@@ -2025,7 +2021,7 @@ export default function BrokerMatrimony() {
                         <div className="broker-card-actions">
                           <button
                             className="broker-btn broker-btn-outline"
-                            onClick={() => openBroker(broker)}
+                            onClick={() => hasSubscription ? openBroker(broker) : handleUnlockBrokerDetails()}
                           >
                             View Profile
                           </button>
@@ -2961,3 +2957,4 @@ export default function BrokerMatrimony() {
     </div>
   );
 }
+

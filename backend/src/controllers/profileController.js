@@ -1,5 +1,7 @@
 
 import Profile from "../models/Profile.js";
+import Subscription from "../models/Subscription.js";
+import { getPlan } from "../config/subscriptionPlans.js";
 
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -33,7 +35,6 @@ const allowedFields = [
 ];
 
 // GET /api/profile/me
-// Retrieve the logged-in user's profile.
 export const getMyProfile = async (req, res) => {
   try {
     const profile = await Profile.findOne({
@@ -63,7 +64,6 @@ export const getMyProfile = async (req, res) => {
 };
 
 // PUT /api/profile/me
-// Create or update the logged-in user's profile.
 export const updateMyProfile = async (req, res) => {
   try {
     const updates = {};
@@ -81,7 +81,6 @@ export const updateMyProfile = async (req, res) => {
       });
     }
 
-    // Validate nested partner preference fields.
     if (
       updates.partnerPreferences !== undefined &&
       (
@@ -96,7 +95,6 @@ export const updateMyProfile = async (req, res) => {
       });
     }
 
-    // Validate minimum and maximum preferred age.
     const existingProfile = await Profile.findOne({
       user: req.user.id,
     }).select("partnerPreferences");
@@ -172,40 +170,150 @@ export const updateMyProfile = async (req, res) => {
 };
 
 // GET /api/profile/discover
-// Fetch registered profiles, excluding the logged-in user.
+// Guests and users without an active subscription receive photos only.
 export const discoverProfiles = async (req, res) => {
   try {
-    const profiles = await Profile.find({
-      user: { $ne: req.user.id },
-    })
+    // Brokers use their separate broker-specific flow.
+    if (req.user?.role === "broker") {
+      return res.status(403).json({
+        success: false,
+        message: "Please use the broker services section.",
+        accessLevel: "broker",
+      });
+    }
+
+    let subscription = null;
+    let plan = null;
+
+    if (req.user) {
+      const now = new Date();
+
+      // Expire subscriptions that have passed their expiry date.
+      await Subscription.updateMany(
+        {
+          user: req.user._id,
+          status: "active",
+          expiresAt: { $lte: now },
+        },
+        {
+          $set: { status: "expired" },
+        }
+      );
+
+      subscription = await Subscription.findOne({
+        user: req.user._id,
+        status: "active",
+        startsAt: { $lte: now },
+        expiresAt: { $gt: now },
+      }).sort({ createdAt: -1 });
+
+      if (subscription) {
+        plan = getPlan(subscription.plan);
+      }
+    }
+
+    // No active plan: return ONLY profile photos.
+    if (!subscription || !plan) {
+      const photoProfiles = await Profile.find({
+        profilePhoto: { $exists: true, $nin: ["", null] },
+        ...(req.user ? { user: { $ne: req.user._id } } : {}),
+      })
+        .select("profilePhoto user")
+        .populate({
+          path: "user",
+          select: "role",
+          match: { role: "user" },
+        })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const photosOnly = photoProfiles
+        .filter((profile) => profile.user)
+        .map((profile) => ({
+          profilePhoto: profile.profilePhoto,
+        }));
+
+      return res.status(200).json({
+        success: true,
+        accessLevel: "photo-only",
+        plan: null,
+        count: photosOnly.length,
+        profiles: photosOnly,
+      });
+    }
+
+    const profileQuery = {
+      ...(req.user ? { user: { $ne: req.user._id } } : {}),
+    };
+
+    const profiles = await Profile.find(profileQuery)
       .select(
         "user dateOfBirth gender religion community maritalStatus height education occupation annualIncome aboutMe country state city profilePhoto createdAt"
       )
-      .populate("user", "fullName")
-      .sort({ createdAt: -1 });
+      .populate({
+        path: "user",
+        select: "fullName email mobile role",
+        match: { role: "user" },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Exclude profiles whose User account no longer exists.
     const registeredProfiles = profiles.filter(
       (profile) => profile.user
     );
 
+    // Starter plan: show limited profile information.
+    if (plan.features?.limitedProfileDetails === true) {
+      const limitedProfiles = registeredProfiles.map((profile) => ({
+        id: String(profile._id),
+        userId: String(profile.user._id),
+        name: profile.user.fullName,
+        dateOfBirth: profile.dateOfBirth,
+        gender: profile.gender,
+        city: profile.city,
+        profilePhoto: profile.profilePhoto,
+      }));
+
+      return res.status(200).json({
+        success: true,
+        accessLevel: "limited",
+        plan: subscription.plan,
+        count: limitedProfiles.length,
+        profiles: limitedProfiles,
+      });
+    }
+
+    // Silver and Gold: return expanded profile information.
+    const fullProfiles = registeredProfiles.map((profile) => ({
+      ...profile,
+      user: {
+        fullName: profile.user.fullName,
+        ...(plan.features?.contactDetails === true ? {
+          email: profile.user.email || "",
+          mobile: profile.user.mobile || "",
+        } : {}),
+      },
+    }));
+
     return res.status(200).json({
       success: true,
-      count: registeredProfiles.length,
-      profiles: registeredProfiles,
+      accessLevel: "full",
+      plan: subscription.plan,
+      count: fullProfiles.length,
+      profiles: fullProfiles,
     });
   } catch (error) {
     console.error("Discover profiles error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to retrieve registered profiles.",
+      message: "Unable to retrieve profiles.",
     });
   }
 };
 
 // GET /api/profile/search
-// Search registered member profiles for the authenticated user.
+// This endpoint requires login and subscription middleware.
 export const searchProfiles = async (req, res) => {
   const page = parseInteger(req.query.page, 1, 1, 100000);
   const limit = parseInteger(req.query.limit, 12, 1, 50);
@@ -363,7 +471,7 @@ export const searchProfiles = async (req, res) => {
 };
 
 // GET /api/profile/public
-// Public visitors can see only profile name and photo.
+// Public visitors can see photos only.
 export const getPublicProfiles = async (req, res) => {
   try {
     const profiles = await Profile.find({
@@ -372,24 +480,23 @@ export const getPublicProfiles = async (req, res) => {
       .select("user profilePhoto")
       .populate({
         path: "user",
-        select: "fullName role",
+        select: "role",
         match: { role: "user" },
       })
       .sort({ createdAt: -1 })
       .lean();
 
-    const publicProfiles = profiles
+    const photosOnly = profiles
       .filter((profile) => profile.user)
       .map((profile) => ({
-        id: profile._id,
-        name: profile.user.fullName,
         profilePhoto: profile.profilePhoto,
       }));
 
     return res.status(200).json({
       success: true,
-      count: publicProfiles.length,
-      profiles: publicProfiles,
+      accessLevel: "photo-only",
+      count: photosOnly.length,
+      profiles: photosOnly,
     });
   } catch (error) {
     console.error("Public profiles error:", error);
@@ -402,7 +509,6 @@ export const getPublicProfiles = async (req, res) => {
 };
 
 // POST /api/profile/me/photo
-// Upload the logged-in user's profile photo to Cloudinary.
 export const uploadMyProfilePhoto = async (req, res) => {
   try {
     if (!req.file || !req.file.path) {
@@ -445,3 +551,4 @@ export const uploadMyProfilePhoto = async (req, res) => {
     });
   }
 };
+

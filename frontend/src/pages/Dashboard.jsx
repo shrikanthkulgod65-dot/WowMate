@@ -137,6 +137,40 @@ function mapDiscoverProfile(profile) {
 export default function Dashboard() {
   const navigate = useNavigate();
 
+const handleProtectedDiscover = async (event) => {
+    event.preventDefault();
+
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/subscription-plans");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/subscription/me", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.active === true) {
+        navigate("/discover");
+      } else {
+        navigate("/subscription-plans");
+      }
+    } catch (error) {
+      console.error("Subscription verification failed:", error);
+      navigate("/subscription-plans");
+    }
+  };
+
   const [user, setUser] = useState(readStoredUser);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState([]);
@@ -1003,7 +1037,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <Link to="/discover" className="as-dash-welcome-button">
+          <Link to="/subscription-plans" className="as-dash-welcome-button" onClick={handleProtectedDiscover}>
             Discover Matches
             <ChevronRight size={17} />
           </Link>
@@ -1074,7 +1108,7 @@ export default function Dashboard() {
             <p>Explore registered members and a few demo photos for layout testing.</p>
           </div>
 
-          <Link to="/discover" className="as-dash-text-link">
+          <Link to="/subscription-plans" className="as-dash-text-link" onClick={handleProtectedDiscover}>
             View all <ChevronRight size={16} />
           </Link>
         </div>

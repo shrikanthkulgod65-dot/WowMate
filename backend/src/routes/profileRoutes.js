@@ -11,35 +11,36 @@ import {
 } from "../controllers/profileController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
+import optionalAuth from "../middleware/optionalAuth.js";
+import { requireFeature } from "../middleware/subscriptionMiddleware.js";
 import profilePhotoUpload from "../middleware/profilePhotoUpload.js";
 
 const router = express.Router();
 
-// PUBLIC ROUTE - no login required.
-// Visitors can see only names and profile photos.
-router.get("/public", getPublicProfiles);
+// Public access: profile photos only.
+router.get("/public", optionalAuth, getPublicProfiles);
 
-// All routes below this line require authentication.
+// Guests and logged-in users can discover profiles.
+// Controller applies photo-only, limited, or full access.
+router.get("/discover", optionalAuth, discoverProfiles);
+
+// The following routes require login.
 router.use(authMiddleware);
 
-// Get logged-in user's profile.
 router.get("/me", getMyProfile);
-
-// Create or update logged-in user's profile.
 router.put("/me", updateMyProfile);
 
-// Upload logged-in user's profile photo to Cloudinary.
-// Frontend must send FormData with the field name "photo".
 router.post(
   "/me/photo",
   profilePhotoUpload.single("photo"),
   uploadMyProfilePhoto
 );
 
-// Get other registered members for Discover Profiles.
-router.get("/discover", discoverProfiles);
-
-// Search registered members.
-router.get("/search", searchProfiles);
+// Advanced profile search: Silver and Gold.
+router.get(
+  "/search",
+  requireFeature("advancedFilters"),
+  searchProfiles
+);
 
 export default router;

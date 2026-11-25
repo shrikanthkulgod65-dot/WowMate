@@ -87,6 +87,40 @@ const professionCategories = [
 export default function ProfessionalMatrimony() {
   const navigate = useNavigate();
 
+const handleProtectedProfileNavigation = async (event) => {
+    event.preventDefault();
+
+    const token =
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/subscription-plans");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/subscription/me", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.active === true) {
+        navigate("/discover-profiles");
+      } else {
+        navigate("/subscription-plans");
+      }
+    } catch (error) {
+      console.error("Subscription verification failed:", error);
+      navigate("/subscription-plans");
+    }
+  };
+
   const [homeUser, setHomeUser] = useState(null);
   const [homeProfile, setHomeProfile] = useState(null);
 
@@ -839,7 +873,7 @@ export default function ProfessionalMatrimony() {
                     {profile.profession}
                   </span>
 
-                  <Link to="/login" className="pro-profile-link">
+                  <Link to="/subscription-plans" className="pro-profile-link" onClick={handleProtectedProfileNavigation}>
                     View Profile <ArrowRight size={17} />
                   </Link>
                 </div>
@@ -848,7 +882,7 @@ export default function ProfessionalMatrimony() {
           </div>
 
           <div style={{ textAlign: "center", marginTop: 38 }}>
-            <Link to="/discover-profiles" className="pro-btn">
+            <Link to="/subscription-plans" className="pro-btn" onClick={handleProtectedProfileNavigation}>
               Explore More Profiles <ArrowRight size={18} />
             </Link>
           </div>

@@ -1,3 +1,4 @@
+
 import express from "express";
 
 import {
@@ -11,10 +12,13 @@ import {
   brokerOnly,
 } from "../middleware/authMiddleware.js";
 
+import optionalAuth from "../middleware/optionalAuth.js";
+
 const router = express.Router();
 
-// Public broker directory
-router.get("/profiles", getAllBrokers);
+// Public broker directory.
+// Guests see photos only; subscription permissions are checked by the controller.
+router.get("/profiles", optionalAuth, getAllBrokers);
 
 // Logged-in broker's own profile
 router.get("/profile", protect, brokerOnly, getMyBrokerProfile);

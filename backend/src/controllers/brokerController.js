@@ -1,24 +1,104 @@
-import User from "../models/User.js";
 
-// Public API: fetch all active registered brokers
+import User from "../models/User.js";
+import Profile from "../models/Profile.js";
+import Subscription from "../models/Subscription.js";
+import { getPlan } from "../config/subscriptionPlans.js";
+
+// Public broker directory:
+// Guests and Starter subscribers see photos only.
+// Silver and Gold subscribers can see broker details.
 export async function getAllBrokers(req, res) {
   try {
     const brokers = await User.find({
       role: "broker",
       accountStatus: "active",
     })
-      .select("fullName brokerDetails createdAt")
+      .select("_id fullName email mobile brokerDetails createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
+    const brokerIds = brokers.map((broker) => broker._id);
+
+    const photos = await Profile.find({
+      user: { $in: brokerIds },
+    })
+      .select("user profilePhoto")
+      .lean();
+
+    const photoMap = new Map(
+      photos.map((profile) => [
+        profile.user.toString(),
+        profile.profilePhoto || "",
+      ])
+    );
+
+    let plan = null;
+
+    if (req.user?._id) {
+      const now = new Date();
+
+      await Subscription.updateMany(
+        {
+          user: req.user._id,
+          status: "active",
+          expiresAt: { $lte: now },
+        },
+        {
+          $set: { status: "expired" },
+        }
+      );
+
+      const subscription = await Subscription.findOne({
+        user: req.user._id,
+        status: "active",
+        startsAt: { $lte: now },
+        expiresAt: { $gt: now },
+      }).sort({ createdAt: -1 });
+
+      if (subscription) {
+        plan = getPlan(subscription.plan);
+      }
+    }
+
+    const canViewDetails =
+      plan?.features?.protectedBrokerDetails === true;
+
+    const canViewContact =
+      plan?.features?.contactDetails === true;
+
+    // Guests and Starter subscribers receive photos only.
+    if (!canViewDetails) {
+      const profiles = brokers
+        .map((broker) => ({
+          profilePhoto: photoMap.get(broker._id.toString()) || "",
+        }))
+        .filter((broker) => broker.profilePhoto);
+
+      return res.status(200).json({
+        success: true,
+        accessLevel: "photo-only",
+        count: profiles.length,
+        profiles,
+      });
+    }
+
+    // Silver and Gold subscribers receive broker details.
     const profiles = brokers.map((broker) => ({
       id: broker._id.toString(),
       fullName: broker.fullName,
+      profilePhoto: photoMap.get(broker._id.toString()) || "",
       brokerDetails: broker.brokerDetails || {},
+      ...(canViewContact
+        ? {
+            email: broker.email,
+            mobile: broker.mobile || "",
+          }
+        : {}),
     }));
 
     return res.status(200).json({
       success: true,
+      accessLevel: "full",
       count: profiles.length,
       profiles,
     });
@@ -32,7 +112,7 @@ export async function getAllBrokers(req, res) {
   }
 }
 
-// Protected API: fetch logged-in broker's profile
+// Logged-in broker's own profile
 export async function getMyBrokerProfile(req, res) {
   try {
     const user = req.user;
@@ -57,7 +137,7 @@ export async function getMyBrokerProfile(req, res) {
   }
 }
 
-// Protected API: update logged-in broker's profile
+// Update logged-in broker's own profile
 export async function updateMyBrokerProfile(req, res) {
   try {
     const {
@@ -111,7 +191,7 @@ export async function updateMyBrokerProfile(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to update broker profile.",
+      message: "Unable to update your broker profile.",
     });
   }
 }
