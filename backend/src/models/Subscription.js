@@ -54,11 +54,24 @@ const subscriptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Existing subscription lookup index
 subscriptionSchema.index({
   user: 1,
   status: 1,
   expiresAt: 1,
 });
+
+// Prevent multiple subscriptions from using the same payment.
+subscriptionSchema.index(
+  { payment: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      payment: { $type: "objectId" },
+    },
+    name: "unique_subscription_payment",
+  }
+);
 
 const Subscription =
   mongoose.models.Subscription ||

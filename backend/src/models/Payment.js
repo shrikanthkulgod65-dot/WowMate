@@ -59,6 +59,30 @@ const paymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Prevent duplicate Razorpay order IDs.
+paymentSchema.index(
+  { razorpayOrderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      razorpayOrderId: { $type: "string", $gt: "" },
+    },
+    name: "unique_razorpay_order",
+  }
+);
+
+// Prevent one Razorpay payment ID from being assigned to multiple records.
+paymentSchema.index(
+  { razorpayPaymentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      razorpayPaymentId: { $type: "string", $gt: "" },
+    },
+    name: "unique_razorpay_payment",
+  }
+);
+
 const Payment =
   mongoose.models.Payment ||
   mongoose.model("Payment", paymentSchema);

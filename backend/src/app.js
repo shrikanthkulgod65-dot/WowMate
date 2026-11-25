@@ -5,12 +5,17 @@ import express from "express";
 import cors from "cors";
 
 import connectDB from "./config/db.js";
+
 import interestRoutes from "./routes/interestRoutes.js";
 import brokerRoutes from "./routes/brokerRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+
+import {
+  handleRazorpayWebhook,
+} from "./controllers/webhookController.js";
 
 import {
   errorMiddleware,
@@ -35,7 +40,10 @@ app.use(
   cors({
     origin(origin, callback) {
       // Allow native apps and requests without an Origin header.
-      if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ""))) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin.replace(/\/+$/, ""))
+      ) {
         return callback(null, true);
       }
 
@@ -44,18 +52,19 @@ app.use(
 
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-razorpay-signature",
+      "x-razorpay-event-id",
+    ],
 
     credentials: true,
   })
 );
 
-// Parse incoming request bodies
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
-
 // Ensure MongoDB is connected before every API request.
-// This also supports Vercel serverless deployments.
+// Supports Vercel serverless deployments.
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -69,6 +78,21 @@ app.use(async (req, res, next) => {
     });
   }
 });
+
+// Razorpay webhook must receive the original raw request body.
+// Keep this BEFORE express.json().
+app.post(
+  "/api/subscriptions/webhook",
+  express.raw({
+    type: "application/json",
+    limit: "1mb",
+  }),
+  handleRazorpayWebhook
+);
+
+// Parse other incoming request bodies
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Root API
 app.get("/", (req, res) => {
@@ -87,7 +111,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// API routes
+// Existing API routes
 app.use("/api/interests", interestRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
