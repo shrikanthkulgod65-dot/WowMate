@@ -434,6 +434,7 @@ export default function BrokerMatrimony() {
           name: profile.fullName || "Broker",
           email: profile.email || "",
           phone: profile.mobile || "",
+          photo: profile.profilePhoto || registeredBroker?.photo || "",
           city: details.city || "",
           experience: `${details.experienceYears ?? 0} years`,
           bureau: details.businessName || "",
@@ -2957,4 +2958,5 @@ export default function BrokerMatrimony() {
     </div>
   );
 }
+
 

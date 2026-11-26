@@ -100,7 +100,7 @@ const handleProtectedProfileNavigation = async (event) => {
     }
 
     try {
-      const response = await fetch("/api/subscription/me", {
+      const response = await fetch("/api/subscriptions/me", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -983,3 +983,4 @@ const handleProtectedProfileNavigation = async (event) => {
     </main>
   );
 }
+

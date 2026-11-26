@@ -74,7 +74,7 @@ const handleProtectedProfileNavigation = async (event) => {
     }
 
     try {
-      const response = await fetch("/api/subscription/me", {
+      const response = await fetch("/api/subscriptions/me", {
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${token}`,
@@ -915,4 +915,5 @@ const handleProtectedProfileNavigation = async (event) => {
     </main>
   );
 }
+
 

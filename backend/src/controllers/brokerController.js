@@ -116,6 +116,7 @@ export async function getAllBrokers(req, res) {
 export async function getMyBrokerProfile(req, res) {
   try {
     const user = req.user;
+    const savedProfile = await Profile.findOne({ user: user._id }).select("profilePhoto").lean();
 
     return res.status(200).json({
       success: true,
@@ -124,6 +125,7 @@ export async function getMyBrokerProfile(req, res) {
         fullName: user.fullName,
         email: user.email,
         mobile: user.mobile || "",
+        profilePhoto: savedProfile?.profilePhoto || "",
         brokerDetails: user.brokerDetails || {},
       },
     });
@@ -195,3 +197,4 @@ export async function updateMyBrokerProfile(req, res) {
     });
   }
 }
+

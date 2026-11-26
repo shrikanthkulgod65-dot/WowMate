@@ -150,7 +150,7 @@ const handleProtectedDiscover = async (event) => {
     }
 
     try {
-      const response = await fetch("/api/subscription/me", {
+      const response = await fetch("/api/subscriptions/me", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -1324,3 +1324,4 @@ const handleProtectedDiscover = async (event) => {
     </div>
   );
 }
+

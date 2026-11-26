@@ -67,7 +67,7 @@ function RequireSubscription({ children, requiredFeature }) {
       }
 
       try {
-        const response = await fetch("/api/subscription/me", {
+        const response = await fetch("/api/subscriptions/me", {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -218,4 +218,5 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
 
