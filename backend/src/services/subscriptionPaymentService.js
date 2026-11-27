@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 import Payment from "../models/Payment.js";
@@ -6,11 +5,11 @@ import Subscription from "../models/Subscription.js";
 import { getPlan } from "../config/subscriptionPlans.js";
 
 /**
- * Marks a verified, captured Razorpay payment as paid
- * and activates exactly one subscription for that payment.
+ * Activates a subscription only after payment has been independently
+ * verified through the payment provider or an authentic webhook.
  *
- * Call this only after independently verifying the payment
- * with Razorpay or validating an authentic webhook.
+ * Razorpay amounts are supplied in paise.
+ * Cashfree amounts are supplied in INR.
  */
 export async function activateSubscriptionForPayment({
   orderId,
@@ -18,9 +17,26 @@ export async function activateSubscriptionForPayment({
   amount,
   currency,
   signature = "",
+  provider = "razorpay",
 }) {
   if (!orderId || !paymentId) {
     throw new Error("Payment order ID and payment ID are required.");
+  }
+
+  if (!["razorpay", "cashfree"].includes(provider)) {
+    throw new Error("Unsupported payment provider.");
+  }
+
+  const orderField =
+    provider === "cashfree" ? "cashfreeOrderId" : "razorpayOrderId";
+
+  const transactionField =
+    provider === "cashfree" ? "cashfreePaymentId" : "razorpayPaymentId";
+
+  const receivedAmount = Number(amount);
+
+  if (!Number.isFinite(receivedAmount)) {
+    throw new Error("Invalid payment amount.");
   }
 
   const session = await mongoose.startSession();
@@ -30,18 +46,23 @@ export async function activateSubscriptionForPayment({
 
     await session.withTransaction(async () => {
       const paymentRecord = await Payment.findOne({
-        razorpayOrderId: orderId,
+        [orderField]: orderId,
+        provider,
       }).session(session);
 
       if (!paymentRecord) {
         throw new Error("Matching payment order was not found.");
       }
 
-      const expectedAmount = Math.round(paymentRecord.amount * 100);
+      const expectedAmount =
+        provider === "cashfree"
+          ? Number(paymentRecord.amount.toFixed(2))
+          : Math.round(paymentRecord.amount * 100);
 
       if (
-        amount !== expectedAmount ||
-        currency !== paymentRecord.currency
+        Math.abs(receivedAmount - expectedAmount) > 0.001 ||
+        String(currency).toUpperCase() !==
+          String(paymentRecord.currency).toUpperCase()
       ) {
         throw new Error("Payment amount or currency does not match.");
       }
@@ -52,12 +73,16 @@ export async function activateSubscriptionForPayment({
         throw new Error("Subscription plan was not found.");
       }
 
+      const existingPaymentId = paymentRecord[transactionField];
+
       if (
         paymentRecord.status === "paid" &&
-        paymentRecord.razorpayPaymentId &&
-        paymentRecord.razorpayPaymentId !== paymentId
+        existingPaymentId &&
+        existingPaymentId !== paymentId
       ) {
-        throw new Error("This order is already associated with another payment.");
+        throw new Error(
+          "This order is already associated with another payment."
+        );
       }
 
       let subscription = await Subscription.findOne({
@@ -66,6 +91,7 @@ export async function activateSubscriptionForPayment({
 
       if (!subscription) {
         const now = new Date();
+
         const expiresAt = new Date(
           now.getTime() +
             plan.durationDays * 24 * 60 * 60 * 1000
@@ -89,9 +115,10 @@ export async function activateSubscriptionForPayment({
       }
 
       paymentRecord.status = "paid";
-      paymentRecord.razorpayPaymentId = paymentId;
+      paymentRecord[transactionField] = paymentId;
 
-      if (signature) {
+      // Preserve Razorpay signature for historical compatibility.
+      if (provider === "razorpay" && signature) {
         paymentRecord.razorpaySignature = signature;
       }
 

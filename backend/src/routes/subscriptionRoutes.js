@@ -1,4 +1,3 @@
-
 import express from "express";
 
 import {
@@ -11,6 +10,11 @@ import {
   verifyPayment,
 } from "../controllers/paymentController.js";
 
+import {
+  createCashfreePaymentOrder,
+  verifyCashfreePayment,
+} from "../controllers/cashfreePaymentController.js";
+
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -21,10 +25,12 @@ router.get("/plans", getSubscriptionPlans);
 // Logged-in user's subscription
 router.get("/me", protect, getMySubscription);
 
-// Create Razorpay payment order
+// Existing Razorpay routes
 router.post("/create-order", protect, createPaymentOrder);
-
-// Verify Razorpay payment
 router.post("/verify-payment", protect, verifyPayment);
+
+// Cashfree payment routes
+router.post("/cashfree/create-order", protect, createCashfreePaymentOrder);
+router.post("/cashfree/verify-payment", protect, verifyCashfreePayment);
 
 export default router;

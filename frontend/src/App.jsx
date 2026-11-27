@@ -27,6 +27,7 @@ import MyProfile from "./pages/MyProfile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ProfessionalMatrimony from "./pages/ProfessionalMatrimony";
 import SearchResults from "./pages/SearchResults";
+import PaymentResult from "./pages/PaymentResult";
 import SubscriptionPlans from "./pages/SubscriptionPlans";
 import Terms from "./pages/Terms";
 
@@ -186,6 +187,7 @@ function AppRoutes() {
 
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+          <Route path="/payment-result" element={<PaymentResult />} />
         <Route
           path="/subscription-plans"
           element={<SubscriptionPlans />}
@@ -218,5 +220,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
-

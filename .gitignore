@@ -1,2 +1,19 @@
 
 frontend/.env
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local backup files
+*.bak
+*.bak.*
+*.backup
+*.backup-*
+*.step*-backup
+
+*.bak-*

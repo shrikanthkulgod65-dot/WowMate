@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = (import.meta.env.VITE_API_URL || "https://wowmate.co.in/api").replace(/\/+$/, "");
 
 const plans = [
   {
@@ -61,36 +61,43 @@ const plans = [
   },
 ];
 
-function loadRazorpayScript() {
+function loadCashfreeScript() {
   return new Promise((resolve) => {
-    if (window.Razorpay) {
+    if (window.Cashfree) {
       resolve(true);
       return;
     }
 
     const existingScript = document.querySelector(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      'script[src="https://sdk.cashfree.com/js/v3/cashfree.js"]'
     );
 
     if (existingScript) {
-      existingScript.addEventListener("load", () =>
-        resolve(Boolean(window.Razorpay))
+      existingScript.addEventListener(
+        "load",
+        () => resolve(Boolean(window.Cashfree)),
+        { once: true }
       );
-      existingScript.addEventListener("error", () => resolve(false));
+
+      existingScript.addEventListener(
+        "error",
+        () => resolve(false),
+        { once: true }
+      );
+
       return;
     }
 
     const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.async = true;
 
-    script.onload = () => resolve(Boolean(window.Razorpay));
+    script.onload = () => resolve(Boolean(window.Cashfree));
     script.onerror = () => resolve(false);
 
     document.body.appendChild(script);
   });
 }
-
 export default function SubscriptionPlans() {
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState(null);
@@ -120,15 +127,16 @@ export default function SubscriptionPlans() {
     setMessage("");
 
     try {
-      const scriptLoaded = await loadRazorpayScript();
+      // Load Cashfree Checkout SDK
+      const scriptLoaded = await loadCashfreeScript();
 
       if (!scriptLoaded) {
-        throw new Error("Unable to load Razorpay Checkout. Please retry.");
+        throw new Error("Unable to load Cashfree Checkout. Please retry.");
       }
 
-      // Step 1: Create order through backend
+      // Create payment order on our backend
       const orderResponse = await fetch(
-        `${API_URL}/subscriptions/create-order`,
+        `${API_URL}/subscriptions/cashfree/create-order`,
         {
           method: "POST",
           headers: {
@@ -145,98 +153,47 @@ export default function SubscriptionPlans() {
 
       if (!orderResponse.ok || !orderData.success) {
         throw new Error(
-          orderData.message || "Unable to create payment order."
+          orderData.message || "Unable to create Cashfree payment order."
         );
       }
 
-      // Step 2: Open Razorpay Checkout
-      const options = {
-        key: orderData.keyId,
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
-        name: "WowMarriage",
-        description: `${plan.name} Membership`,
-        order_id: orderData.order.id,
+      const paymentSessionId = orderData.order?.paymentSessionId;
+      const environment = orderData.environment;
 
-        theme: {
-          color: "#8b1e4f",
-        },
+      if (
+        !paymentSessionId ||
+        !["sandbox", "production"].includes(environment)
+      ) {
+        throw new Error("Invalid Cashfree payment session.");
+      }
 
-        handler: async function (response) {
-          try {
-            // Step 3: Verify payment through backend
-            const verifyResponse = await fetch(
-              `${API_URL}/subscriptions/verify-payment`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  razorpay_payment_id:
-                    response.razorpay_payment_id,
-                  razorpay_order_id:
-                    response.razorpay_order_id,
-                  razorpay_signature:
-                    response.razorpay_signature,
-                }),
-              }
-            );
-
-            const verifyData = await verifyResponse.json();
-
-            if (!verifyResponse.ok || !verifyData.success) {
-              throw new Error(
-                verifyData.message || "Payment verification failed."
-              );
-            }
-
-            showMessage(
-              `${plan.name} membership activated successfully!`,
-              "success"
-            );
-          } catch (error) {
-            showMessage(
-              error.message ||
-                "Payment received, but verification is pending. Please contact support before retrying.",
-              "error"
-            );
-          } finally {
-            setLoadingPlan(null);
-          }
-        },
-
-        modal: {
-          ondismiss: function () {
-            setLoadingPlan(null);
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-
-      razorpay.on("payment.failed", function (response) {
-        showMessage(
-          response.error?.description ||
-            "Payment failed. Please try again.",
-          "error"
-        );
-
-        setLoadingPlan(null);
+      // Initialize Cashfree Checkout
+      const cashfree = window.Cashfree({
+        mode: environment,
       });
 
-      razorpay.open();
+      // Open the hosted Cashfree payment page
+      const checkoutResult = await cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: "_self",
+      });
+
+      if (checkoutResult?.error) {
+        throw new Error(
+          checkoutResult.error.message || "Cashfree checkout failed."
+        );
+      }
     } catch (error) {
+      console.error("Cashfree checkout error:", error);
+
       showMessage(
-        error.message || "Something went wrong. Please try again.",
+        error.message || "Unable to start payment. Please try again.",
         "error"
       );
 
       setLoadingPlan(null);
     }
   };
-
   return (
     <main>
       <section className="pricing-section">
@@ -333,7 +290,7 @@ export default function SubscriptionPlans() {
           <div className="pricing-note">
             <p>
               <strong>Secure payments:</strong> Payments are
-              processed through Razorpay. Your membership activates
+              processed securely through Cashfree. Your membership activates
               after successful payment verification.
             </p>
 

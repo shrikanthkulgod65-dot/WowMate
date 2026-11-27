@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
@@ -28,7 +27,7 @@ const paymentSchema = new mongoose.Schema(
 
     provider: {
       type: String,
-      enum: ["razorpay"],
+      enum: ["razorpay", "cashfree"],
       default: "razorpay",
     },
 
@@ -55,11 +54,28 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    cashfreeOrderId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    cashfreePaymentId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    cashfreePaymentSessionId: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );
 
-// Prevent duplicate Razorpay order IDs.
+// Preserve existing Razorpay indexes.
 paymentSchema.index(
   { razorpayOrderId: 1 },
   {
@@ -71,7 +87,6 @@ paymentSchema.index(
   }
 );
 
-// Prevent one Razorpay payment ID from being assigned to multiple records.
 paymentSchema.index(
   { razorpayPaymentId: 1 },
   {
@@ -80,6 +95,29 @@ paymentSchema.index(
       razorpayPaymentId: { $type: "string", $gt: "" },
     },
     name: "unique_razorpay_payment",
+  }
+);
+
+// Add Cashfree indexes.
+paymentSchema.index(
+  { cashfreeOrderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      cashfreeOrderId: { $type: "string", $gt: "" },
+    },
+    name: "unique_cashfree_order",
+  }
+);
+
+paymentSchema.index(
+  { cashfreePaymentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      cashfreePaymentId: { $type: "string", $gt: "" },
+    },
+    name: "unique_cashfree_payment",
   }
 );
 

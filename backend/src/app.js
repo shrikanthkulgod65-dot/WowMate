@@ -18,6 +18,10 @@ import {
 } from "./controllers/webhookController.js";
 
 import {
+  handleCashfreeWebhook,
+} from "./controllers/cashfreeWebhookController.js";
+
+import {
   errorMiddleware,
   notFoundMiddleware,
 } from "./middleware/errorMiddleware.js";
@@ -88,6 +92,16 @@ app.post(
     limit: "1mb",
   }),
   handleRazorpayWebhook
+);
+
+// Cashfree webhook must receive the original raw request body.
+app.post(
+  "/api/subscriptions/cashfree/webhook",
+  express.raw({
+    type: "application/json",
+    limit: "1mb",
+  }),
+  handleCashfreeWebhook
 );
 
 // Parse other incoming request bodies
