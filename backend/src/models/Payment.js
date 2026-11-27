@@ -28,7 +28,7 @@ const paymentSchema = new mongoose.Schema(
     provider: {
       type: String,
       enum: ["razorpay", "cashfree"],
-      default: "razorpay",
+      default: "cashfree",
     },
 
     status: {

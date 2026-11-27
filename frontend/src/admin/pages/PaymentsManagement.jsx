@@ -82,7 +82,8 @@ export default function PaymentsManagement() {
 
       const transactionId =
         payment.transactionId ||
-        payment.razorpayPaymentId ||
+        payment.cashfreePaymentId ||
+                          payment.razorpayPaymentId ||
         payment.paymentId ||
         "";
 
@@ -194,7 +195,8 @@ export default function PaymentsManagement() {
       payment.user?.fullName || payment.customerName || "",
       payment.user?.email || payment.email || "",
       payment.transactionId ||
-        payment.razorpayPaymentId ||
+        payment.cashfreePaymentId ||
+                          payment.razorpayPaymentId ||
         payment.paymentId ||
         "",
       payment.planName || "",
@@ -432,6 +434,7 @@ export default function PaymentsManagement() {
 
                       <td style={{ padding: 14, borderBottom: "1px solid #eee" }}>
                         {payment.transactionId ||
+                          payment.cashfreePaymentId ||
                           payment.razorpayPaymentId ||
                           payment.paymentId ||
                           "—"}
@@ -536,7 +539,8 @@ export default function PaymentsManagement() {
             <p>
               <strong>Transaction ID:</strong>{" "}
               {selectedPayment.transactionId ||
-                selectedPayment.razorpayPaymentId ||
+                selectedPayment.cashfreePaymentId ||
+                          selectedPayment.razorpayPaymentId ||
                 selectedPayment.paymentId ||
                 "—"}
             </p>

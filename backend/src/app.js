@@ -14,10 +14,6 @@ import adminRoutes from "./routes/adminRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 
 import {
-  handleRazorpayWebhook,
-} from "./controllers/webhookController.js";
-
-import {
   handleCashfreeWebhook,
 } from "./controllers/cashfreeWebhookController.js";
 
@@ -59,8 +55,6 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Authorization",
-      "x-razorpay-signature",
-      "x-razorpay-event-id",
     ],
 
     credentials: true,
@@ -83,16 +77,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Razorpay webhook must receive the original raw request body.
-// Keep this BEFORE express.json().
-app.post(
-  "/api/subscriptions/webhook",
-  express.raw({
-    type: "application/json",
-    limit: "1mb",
-  }),
-  handleRazorpayWebhook
-);
+
 
 // Cashfree webhook must receive the original raw request body.
 app.post(

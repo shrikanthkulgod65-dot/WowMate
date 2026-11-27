@@ -17,7 +17,7 @@ export async function activateSubscriptionForPayment({
   amount,
   currency,
   signature = "",
-  provider = "razorpay",
+  provider = "cashfree",
 }) {
   if (!orderId || !paymentId) {
     throw new Error("Payment order ID and payment ID are required.");
