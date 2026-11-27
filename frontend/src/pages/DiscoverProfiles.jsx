@@ -18,7 +18,6 @@ const defaultFilters = {
 const FALLBACK_PROFILE_IMAGE =
   "https://placehold.co/800x800/f5e6ed/8e103f?text=Wowmate";
 
-// Supports Cloudinary URL strings and common image object formats.
 const getPhotoUrl = (photo) => {
   if (typeof photo === "string") return photo.trim();
   if (!photo || typeof photo !== "object") return "";
@@ -49,6 +48,10 @@ const getProfilePhotos = (profile, user) => {
   ];
 };
 
+const getAuthToken = () =>
+  localStorage.getItem("token") ||
+  sessionStorage.getItem("token");
+
 export default function DiscoverProfiles() {
   const [filters, setFilters] = useState(defaultFilters);
   const [sortBy, setSortBy] = useState("recommended");
@@ -56,26 +59,38 @@ export default function DiscoverProfiles() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState("");
   const [showFilters, setShowFilters] = useState(true);
+
   const [interestLoadingId, setInterestLoadingId] = useState(null);
   const [sentInterestIds, setSentInterestIds] = useState([]);
+
   const [backendProfiles, setBackendProfiles] = useState([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [profilesError, setProfilesError] = useState("");
 
-  // Load registered profiles from the Wowmate backend.
+  // Contact unlock subscription information.
+  const [contactUnlockLimit, setContactUnlockLimit] = useState(0);
+  const [contactUnlocksUsed, setContactUnlocksUsed] = useState(0);
+  const [contactUnlocksRemaining, setContactUnlocksRemaining] =
+    useState(0);
+
+  const [contactLoadingId, setContactLoadingId] = useState(null);
+  const [contactNotice, setContactNotice] = useState("");
+
+  // Load registered profiles.
   React.useEffect(() => {
     let cancelled = false;
 
     const loadBackendProfiles = async () => {
-      const token =
-        localStorage.getItem("token") ||
-        sessionStorage.getItem("token");
+      const token = getAuthToken();
 
       if (!token) {
         setBackendProfiles([]);
         setProfilesError(
           "Please log in to view registered member profiles."
         );
+        setContactUnlockLimit(0);
+        setContactUnlocksUsed(0);
+        setContactUnlocksRemaining(0);
         setProfilesLoading(false);
         return;
       }
@@ -93,6 +108,7 @@ export default function DiscoverProfiles() {
         });
 
         const data = await response.json().catch(() => ({}));
+        const payload = data.data || data;
 
         if (!response.ok) {
           throw new Error(
@@ -101,13 +117,23 @@ export default function DiscoverProfiles() {
           );
         }
 
-        const records = Array.isArray(data.profiles)
-          ? data.profiles
-          : Array.isArray(data.data?.profiles)
-            ? data.data.profiles
-            : Array.isArray(data.data)
-              ? data.data
-              : [];
+        if (!cancelled) {
+          setContactUnlockLimit(
+            Number(payload.contactUnlockLimit || 0)
+          );
+
+          setContactUnlocksUsed(
+            Number(payload.contactUnlocksUsed || 0)
+          );
+
+          setContactUnlocksRemaining(
+            Number(payload.contactUnlocksRemaining || 0)
+          );
+        }
+
+        const records = Array.isArray(payload.profiles)
+          ? payload.profiles
+          : [];
 
         let currentUserId = "";
 
@@ -140,12 +166,10 @@ export default function DiscoverProfiles() {
                   item?.userId ||
                   "";
 
-            // Do not display records without a valid MongoDB user ID.
             if (!/^[a-f\d]{24}$/i.test(String(receiverId))) {
               return null;
             }
 
-            // Do not display the currently logged-in user's own profile.
             if (
               currentUserId &&
               String(receiverId) === currentUserId
@@ -199,31 +223,41 @@ export default function DiscoverProfiles() {
               .join(", ");
 
             return {
-              id: String(item._id || receiverId),
+              id: String(item._id || item.id || receiverId),
+              profileId: String(item._id || item.profileId || item.id || ""),
               user: String(receiverId),
               userId: String(receiverId),
+
               name:
                 user.fullName ||
                 user.name ||
                 "Wowmate Member",
+
               age,
+
               gender:
                 item.gender === "Female"
                   ? "Bride"
                   : item.gender === "Male"
                     ? "Groom"
                     : "",
+
               profession: occupation,
-              education:
-                item.education || "Not specified",
+              education: item.education || "Not specified",
+
               location:
                 location || "Location not specified",
+
               category,
               height: item.height || "",
               image: profilePhotos[0] || "",
               photos: profilePhotos,
               about: item.aboutMe || item.about || "",
+
               isBackendProfile: true,
+
+              contactUnlocked: item.contactUnlocked === true,
+              contactDetails: null,
             };
           })
           .filter(Boolean);
@@ -249,6 +283,7 @@ export default function DiscoverProfiles() {
     loadBackendProfiles();
 
     window.addEventListener("authChanged", loadBackendProfiles);
+
     window.addEventListener(
       "apnishaadi-profiles-updated",
       loadBackendProfiles
@@ -269,15 +304,11 @@ export default function DiscoverProfiles() {
     };
   }, []);
 
-  // Load interests already sent by the logged-in member.
+  // Load existing sent interests.
   React.useEffect(() => {
     let cancelled = false;
 
-    const token =
-      localStorage.getItem("token") ||
-      sessionStorage.getItem("token");
-
-    if (!token) return undefined;
+    if (!getAuthToken()) return undefined;
 
     getSentInterests()
       .then((response) => {
@@ -293,7 +324,7 @@ export default function DiscoverProfiles() {
 
             return typeof receiver === "string"
               ? receiver
-              : receiver?._id;
+              : receiver?._id || receiver?.id;
           })
           .filter((id) =>
             /^[a-f\d]{24}$/i.test(String(id || ""))
@@ -324,7 +355,7 @@ export default function DiscoverProfiles() {
     setFilters(defaultFilters);
   };
 
-  // IMPORTANT: only backendProfiles are used here.
+  // Filter profiles.
   const filteredProfiles = useMemo(() => {
     const keyword = filters.keyword.trim().toLowerCase();
     const location = filters.location.trim().toLowerCase();
@@ -377,11 +408,9 @@ export default function DiscoverProfiles() {
     );
   };
 
-  // Send interest to a registered backend member.
+  // Send a normal interest.
   const handleSendInterest = async (profile) => {
-    const token =
-      localStorage.getItem("token") ||
-      sessionStorage.getItem("token");
+    const token = getAuthToken();
 
     if (!token) {
       window.alert("Please log in to express interest.");
@@ -396,9 +425,7 @@ export default function DiscoverProfiles() {
       !profile.isBackendProfile ||
       !/^[a-f\d]{24}$/i.test(receiverId)
     ) {
-      window.alert(
-        "This member profile is not linked to a valid backend user account. Please refresh profiles or contact support."
-      );
+      window.alert("Invalid member account. Please refresh profiles.");
       return;
     }
 
@@ -430,6 +457,117 @@ export default function DiscoverProfiles() {
       );
     } finally {
       setInterestLoadingId(null);
+    }
+  };
+
+  // Unlock an individual member's contact details.
+  const handleUnlockContact = async (profile) => {
+    const token = getAuthToken();
+
+    if (!token) {
+      window.alert("Please log in to unlock contact details.");
+      return;
+    }
+
+    const profileId = String(
+      profile.profileId || profile.id || ""
+    );
+
+    if (!/^[a-f\d]{24}$/i.test(profileId)) {
+      window.alert(
+        "Invalid profile ID. Please refresh the profiles."
+      );
+      return;
+    }
+
+    if (
+      contactLoadingId === profile.id ||
+      (!profile.contactUnlocked &&
+        contactUnlocksRemaining <= 0)
+    ) {
+      if (
+        !profile.contactUnlocked &&
+        contactUnlocksRemaining <= 0
+      ) {
+        window.alert(
+          "You have used all your contact unlock credits. Please upgrade your plan."
+        );
+      }
+      return;
+    }
+
+    try {
+      setContactLoadingId(profile.id);
+      setContactNotice("");
+
+      const response = await fetch(
+        `/api/profile/${encodeURIComponent(profileId)}/contact-unlock`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to unlock contact details."
+        );
+      }
+
+      const updatedProfile = {
+        ...profile,
+        contactUnlocked: true,
+        contactDetails: data.contact || {},
+      };
+
+      setBackendProfiles((current) =>
+        current.map((item) =>
+          item.id === profile.id
+            ? updatedProfile
+            : item
+        )
+      );
+
+      setSelectedProfile((current) =>
+        current?.id === profile.id
+          ? updatedProfile
+          : current
+      );
+
+      if (typeof data.usage?.limit === "number") {
+        setContactUnlockLimit(data.usage.limit);
+      }
+
+      if (typeof data.usage?.used === "number") {
+        setContactUnlocksUsed(data.usage.used);
+      } else if (!data.alreadyUnlocked) {
+        setContactUnlocksUsed((current) => current + 1);
+      }
+
+      if (typeof data.usage?.remaining === "number") {
+        setContactUnlocksRemaining(data.usage.remaining);
+      } else if (!data.alreadyUnlocked) {
+        setContactUnlocksRemaining((current) =>
+          Math.max(0, current - 1)
+        );
+      }
+
+      setContactNotice(
+        data.alreadyUnlocked
+          ? "Contact details retrieved successfully."
+          : "Contact unlocked successfully."
+      );
+    } catch (error) {
+      window.alert(
+        error.message || "Unable to unlock contact details."
+      );
+    } finally {
+      setContactLoadingId(null);
     }
   };
 
@@ -519,8 +657,19 @@ export default function DiscoverProfiles() {
         }
 
         .discover-toolbar p {
-          margin: 0;
+          margin: 5px 0;
           color: var(--muted);
+          font-size: 13px;
+        }
+
+        .discover-contact-balance {
+          color: #6d28d9 !important;
+          font-weight: 750;
+        }
+
+        .discover-notice {
+          margin: 8px 0;
+          color: #15803d !important;
           font-size: 13px;
         }
 
@@ -767,6 +916,50 @@ export default function DiscoverProfiles() {
           cursor: not-allowed;
         }
 
+        .discover-contact-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 9px;
+          margin-top: 12px;
+        }
+
+        .discover-unlock {
+          width: 100%;
+          min-height: 42px;
+          padding: 10px 14px;
+          border: 1px solid #8b5cf6;
+          border-radius: 8px;
+          background: #f5f0ff;
+          color: #6d28d9;
+          font-size: 13px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .discover-unlock:hover {
+          background: #ede4ff;
+        }
+
+        .discover-unlock:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .discover-contact-details {
+          padding: 12px;
+          border: 1px solid #ddd6fe;
+          border-radius: 9px;
+          background: #faf8ff;
+          color: #43305f;
+          font-size: 13px;
+          line-height: 1.8;
+          overflow-wrap: anywhere;
+        }
+
+        .discover-contact-details p {
+          margin: 5px 0;
+        }
+
         .discover-empty {
           grid-column: 1 / -1;
           padding: 45px 20px;
@@ -984,12 +1177,26 @@ export default function DiscoverProfiles() {
         <div className="discover-toolbar">
           <div>
             <h2>Discover Profiles</h2>
+
             <p>
               {filteredProfiles.length}{" "}
               {filteredProfiles.length === 1 ? "profile" : "profiles"} found
               {" · "}
               {savedProfiles.length} saved
             </p>
+
+            {contactUnlockLimit > 0 && (
+              <p className="discover-contact-balance">
+                Contact unlocks remaining:{" "}
+                {contactUnlocksRemaining} / {contactUnlockLimit}
+              </p>
+            )}
+
+            {contactNotice && (
+              <p className="discover-notice" role="status">
+                {contactNotice}
+              </p>
+            )}
           </div>
 
           <div className="discover-toolbar-actions">
@@ -1269,6 +1476,50 @@ export default function DiscoverProfiles() {
                             : "Express Interest"}
                       </button>
                     </div>
+
+                    <div className="discover-contact-panel">
+                      <button
+                        type="button"
+                        className="discover-unlock"
+                        onClick={() => handleUnlockContact(profile)}
+                        disabled={
+                          contactLoadingId === profile.id ||
+                          (
+                            !profile.contactUnlocked &&
+                            contactUnlocksRemaining <= 0
+                          )
+                        }
+                      >
+                        {contactLoadingId === profile.id
+                          ? "Unlocking..."
+                          : profile.contactUnlocked
+                            ? profile.contactDetails
+                              ? "Contact Unlocked"
+                              : "View Contact Details"
+                            : contactUnlocksRemaining <= 0
+                              ? "No Unlocks Remaining"
+                              : "Unlock Contact"}
+                      </button>
+
+                      {profile.contactUnlocked &&
+                        profile.contactDetails && (
+                          <div className="discover-contact-details">
+                            <strong>Contact Details</strong>
+
+                            <p>
+                              Email:{" "}
+                              {profile.contactDetails.email ||
+                                "Not available"}
+                            </p>
+
+                            <p>
+                              Mobile:{" "}
+                              {profile.contactDetails.mobile ||
+                                "Not available"}
+                            </p>
+                          </div>
+                        )}
+                    </div>
                   </div>
                 </article>
               ))}
@@ -1305,6 +1556,7 @@ export default function DiscoverProfiles() {
         </p>
       </div>
 
+      {/* Profile details modal */}
       {selectedProfile && (
         <div
           className="discover-modal-backdrop"
@@ -1431,6 +1683,57 @@ export default function DiscoverProfiles() {
               </p>
 
               <p>{selectedProfile.about}</p>
+
+              <div className="discover-contact-panel">
+                <h3>Contact Information</h3>
+
+                {selectedProfile.contactUnlocked &&
+                selectedProfile.contactDetails ? (
+                  <div className="discover-contact-details">
+                    <p>
+                      <strong>Email:</strong>{" "}
+                      {selectedProfile.contactDetails.email ||
+                        "Not available"}
+                    </p>
+
+                    <p>
+                      <strong>Mobile:</strong>{" "}
+                      {selectedProfile.contactDetails.mobile ||
+                        "Not available"}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="discover-unlock"
+                      onClick={() =>
+                        handleUnlockContact(selectedProfile)
+                      }
+                      disabled={
+                        contactLoadingId === selectedProfile.id ||
+                        (
+                          !selectedProfile.contactUnlocked &&
+                          contactUnlocksRemaining <= 0
+                        )
+                      }
+                    >
+                      {contactLoadingId === selectedProfile.id
+                        ? "Unlocking..."
+                        : selectedProfile.contactUnlocked
+                          ? "View Contact Details"
+                          : contactUnlocksRemaining <= 0
+                            ? "No Unlocks Remaining"
+                            : "Unlock Contact Details"}
+                    </button>
+
+                    <p className="discover-meta">
+                      Remaining contact unlocks:{" "}
+                      {contactUnlocksRemaining}
+                    </p>
+                  </>
+                )}
+              </div>
 
               {Array.isArray(selectedProfile.photos) &&
                 selectedProfile.photos.length > 1 && (

@@ -28,22 +28,43 @@ import {
   getSentInterests,
 } from "../services/interestService.js";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://wowmate.co.in/api"
+).replace(/\/+$/, "");
 
 const demoMatches = [
   {
-    id: "demo-priya", isDemo: true, name: "Priya Sharma", age: 27,
-    location: "Bengaluru, Karnataka", profession: "Software Engineer", education: "B.Tech",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+    id: "demo-priya",
+    isDemo: true,
+    name: "Priya Sharma",
+    age: 27,
+    location: "Bengaluru, Karnataka",
+    profession: "Software Engineer",
+    education: "B.Tech",
+    image:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: "demo-ananya", isDemo: true, name: "Ananya Rao", age: 26,
-    location: "Mysuru, Karnataka", profession: "Doctor", education: "MBBS",
-    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
+    id: "demo-ananya",
+    isDemo: true,
+    name: "Ananya Rao",
+    age: 26,
+    location: "Mysuru, Karnataka",
+    profession: "Doctor",
+    education: "MBBS",
+    image:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: "demo-sneha", isDemo: true, name: "Sneha Kulkarni", age: 25,
-    location: "Belagavi, Karnataka", profession: "Teacher", education: "M.A., B.Ed.",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80",
+    id: "demo-sneha",
+    isDemo: true,
+    name: "Sneha Kulkarni",
+    age: 25,
+    location: "Belagavi, Karnataka",
+    profession: "Teacher",
+    education: "M.A., B.Ed.",
+    image:
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80",
   },
 ];
 
@@ -71,6 +92,13 @@ const initialActivity = [
   },
 ];
 
+function getAuthToken() {
+  return (
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token")
+  );
+}
+
 function readStoredUser() {
   try {
     const storedUser =
@@ -81,7 +109,6 @@ function readStoredUser() {
     return null;
   }
 }
-
 
 function calculateAge(dateOfBirth) {
   if (!dateOfBirth) return null;
@@ -105,31 +132,48 @@ function calculateAge(dateOfBirth) {
 
 function mapDiscoverProfile(profile) {
   const user = profile?.user;
+
   const userId =
-    typeof user === "string" ? user : user?._id || profile?.userId;
+    typeof user === "string"
+      ? user
+      : user?._id || user?.id || profile?.userId;
 
   const fullName =
     typeof user === "object" && user
       ? user.fullName || user.name
       : profile?.fullName || profile?.name;
 
-  const location = [profile?.city, profile?.state, profile?.country]
+  const location = [
+    profile?.city,
+    profile?.state,
+    profile?.country,
+  ]
     .filter(Boolean)
     .join(", ");
 
   return {
     ...profile,
+
+    // Profile document ID is used for contact unlocking.
+   profileId: String(profile?._id || profile?.profileId || profile?.id || ""),
+
+    // User ID is used for sending interests.
     id: String(userId || profile?._id || ""),
     user: userId ? String(userId) : "",
     userId: userId ? String(userId) : "",
+
     name: fullName || "Wowmate Member",
     age: calculateAge(profile?.dateOfBirth),
     location: location || "Location not added",
     profession: profile?.occupation || "Occupation not added",
     education: profile?.education || "Education not added",
+
     image:
       profile?.profilePhoto ||
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
+
+    contactUnlocked: profile?.contactUnlocked === true,
+    contactDetails: null,
     compatibility: null,
   };
 }
@@ -137,12 +181,27 @@ function mapDiscoverProfile(profile) {
 export default function Dashboard() {
   const navigate = useNavigate();
 
-const handleProtectedDiscover = async (event) => {
+  const [user, setUser] = useState(readStoredUser);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [savedProfiles, setSavedProfiles] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [matchesLoading, setMatchesLoading] = useState(true);
+  const [matchesError, setMatchesError] = useState("");
+  const [sentInterests, setSentInterests] = useState([]);
+  const [interestLoadingId, setInterestLoadingId] = useState(null);
+  const [notice, setNotice] = useState("");
+
+  // Subscription contact credits.
+  const [contactUnlockLimit, setContactUnlockLimit] = useState(0);
+  const [contactUnlocksUsed, setContactUnlocksUsed] = useState(0);
+  const [contactUnlocksRemaining, setContactUnlocksRemaining] =
+    useState(0);
+  const [contactLoadingId, setContactLoadingId] = useState(null);
+
+  const handleProtectedDiscover = async (event) => {
     event.preventDefault();
 
-    const token =
-      localStorage.getItem("token") ||
-      sessionStorage.getItem("token");
+    const token = getAuthToken();
 
     if (!token) {
       navigate("/subscription-plans");
@@ -150,7 +209,7 @@ const handleProtectedDiscover = async (event) => {
     }
 
     try {
-      const response = await fetch("/api/subscriptions/me", {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/me`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -171,64 +230,71 @@ const handleProtectedDiscover = async (event) => {
     }
   };
 
-  const [user, setUser] = useState(readStoredUser);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [savedProfiles, setSavedProfiles] = useState([]);
-  const [matches, setMatches] = useState([]);
-  const [matchesLoading, setMatchesLoading] = useState(true);
-  const [matchesError, setMatchesError] = useState("");
-  const [sentInterests, setSentInterests] = useState([]);
-  const [interestLoadingId, setInterestLoadingId] = useState(null);
-  const [notice, setNotice] = useState("");
-
+  // Load real member profiles and contact credit information.
   useEffect(() => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = getAuthToken();
 
     if (!token) {
       setMatches([]);
       setMatchesLoading(false);
-      setMatchesError("Please log in to view registered member profiles.");
-      return;
+      setMatchesError(
+        "Please log in to view registered member profiles."
+      );
+      return undefined;
     }
 
     let isMounted = true;
-
-    const apiBaseUrl = (
-      import.meta.env.VITE_API_URL || "http://wowmate.co.in/api"
-    ).replace(/\/+$/, "");
 
     const loadDiscoverProfiles = async () => {
       try {
         setMatchesLoading(true);
         setMatchesError("");
 
-        const response = await fetch(`${apiBaseUrl}/profile/discover`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/profile/discover`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         const data = await response.json().catch(() => ({}));
+        const payload = data.data || data;
 
         if (!response.ok) {
           throw new Error(
-            data.message || `Unable to load profiles (${response.status}).`
+            data.message ||
+              `Unable to load profiles (${response.status}).`
           );
         }
 
-        const profiles = Array.isArray(data)
-          ? data
-          : Array.isArray(data.profiles)
-            ? data.profiles
-            : [];
+        const profiles = Array.isArray(payload.profiles)
+          ? payload.profiles
+          : [];
 
         if (isMounted) {
+          setContactUnlockLimit(
+            Number(payload.contactUnlockLimit || 0)
+          );
+
+          setContactUnlocksUsed(
+            Number(payload.contactUnlocksUsed || 0)
+          );
+
+          setContactUnlocksRemaining(
+            Number(payload.contactUnlocksRemaining || 0)
+          );
+
           const currentUser = readStoredUser();
+
           const currentUserId = String(
-            currentUser?._id || currentUser?.id || currentUser?.userId || ""
+            currentUser?._id ||
+              currentUser?.id ||
+              currentUser?.userId ||
+              ""
           );
 
           const mappedProfiles = profiles
@@ -237,7 +303,8 @@ const handleProtectedDiscover = async (event) => {
               (profile) =>
                 profile.user &&
                 /^[a-f\d]{24}$/i.test(profile.user) &&
-                profile.user !== currentUserId
+                profile.user !== currentUserId &&
+                /^[a-f\d]{24}$/i.test(profile.profileId)
             );
 
           setMatches(mappedProfiles);
@@ -262,11 +329,9 @@ const handleProtectedDiscover = async (event) => {
     };
   }, []);
 
+  // Load sent interests.
   useEffect(() => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-
-    if (!token) return;
+    if (!getAuthToken()) return undefined;
 
     let isMounted = true;
 
@@ -281,7 +346,10 @@ const handleProtectedDiscover = async (event) => {
         const receiverIds = interests
           .map((item) => {
             const receiver = item.receiver;
-            return typeof receiver === "string" ? receiver : receiver?._id;
+
+            return typeof receiver === "string"
+              ? receiver
+              : receiver?._id || receiver?.id;
           })
           .filter(Boolean)
           .map(String);
@@ -299,6 +367,7 @@ const handleProtectedDiscover = async (event) => {
     };
   }, []);
 
+  // Refresh stored account information after login/logout.
   useEffect(() => {
     const updateUser = () => {
       setUser(readStoredUser());
@@ -318,7 +387,6 @@ const handleProtectedDiscover = async (event) => {
     "Member";
 
   const email = user?.email || "";
-
   const profileCompletion = user?.profileCompletion || 35;
 
   const handleLogout = () => {
@@ -340,28 +408,31 @@ const handleProtectedDiscover = async (event) => {
     );
   };
 
+  // Send normal interest.
   const handleSendInterest = async (profile) => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = getAuthToken();
 
     if (!token) {
       setNotice("Please log in to express interest.");
       return;
     }
 
-    // Demo cards are kept for visual testing only; they are not database members.
     if (profile.isDemo) {
-      setNotice("This is a demo preview photo. Register another member account and complete its profile to test a real interest request.");
+      setNotice(
+        "This is a demo preview photo. Register another member account and complete its profile to test a real interest request."
+      );
       return;
     }
 
-    // The API requires the receiver's MongoDB User ID from the populated profile.
     const receiverId =
       typeof profile.user === "string"
         ? profile.user
         : profile.user?._id || profile.userId;
 
-    if (!receiverId || !/^[a-f\d]{24}$/i.test(String(receiverId))) {
+    if (
+      !receiverId ||
+      !/^[a-f\d]{24}$/i.test(String(receiverId))
+    ) {
       setNotice(
         "This profile is missing a valid registered member ID. Please refresh profiles or contact support."
       );
@@ -391,9 +462,115 @@ const handleProtectedDiscover = async (event) => {
 
       setNotice(response.message || "Interest sent successfully.");
     } catch (error) {
-      setNotice(error.message || "Unable to send interest. Please try again.");
+      setNotice(
+        error.message || "Unable to send interest. Please try again."
+      );
     } finally {
       setInterestLoadingId(null);
+    }
+  };
+
+  // Unlock a member's phone/email using the active subscription.
+  const handleUnlockContact = async (profile) => {
+    const token = getAuthToken();
+
+    if (!token) {
+      setNotice("Please log in to unlock contact details.");
+      return;
+    }
+
+    if (profile.isDemo) {
+      setNotice("Contact details are not available for demo profiles.");
+      return;
+    }
+
+    const profileId = String(profile.profileId || "");
+
+    if (!/^[a-f\d]{24}$/i.test(profileId)) {
+      setNotice("Invalid profile ID. Please refresh the profiles.");
+      return;
+    }
+
+    if (contactLoadingId === profile.id) return;
+
+    if (
+      !profile.contactUnlocked &&
+      contactUnlocksRemaining <= 0
+    ) {
+      setNotice(
+        "You have used all your contact unlock credits. Please upgrade your subscription."
+      );
+      return;
+    }
+
+    try {
+      setContactLoadingId(profile.id);
+      setNotice("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/profile/${encodeURIComponent(
+          profileId
+        )}/contact-unlock`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to unlock contact details."
+        );
+      }
+
+      const updatedProfile = {
+        ...profile,
+        contactUnlocked: true,
+        contactDetails: data.contact || {},
+      };
+
+      setMatches((previous) =>
+        previous.map((item) =>
+          item.profileId === profileId
+            ? updatedProfile
+            : item
+        )
+      );
+
+      if (typeof data.usage?.limit === "number") {
+        setContactUnlockLimit(data.usage.limit);
+      }
+
+      if (typeof data.usage?.used === "number") {
+        setContactUnlocksUsed(data.usage.used);
+      } else if (!data.alreadyUnlocked) {
+        setContactUnlocksUsed((current) => current + 1);
+      }
+
+      if (typeof data.usage?.remaining === "number") {
+        setContactUnlocksRemaining(data.usage.remaining);
+      } else if (!data.alreadyUnlocked) {
+        setContactUnlocksRemaining((current) =>
+          Math.max(0, current - 1)
+        );
+      }
+
+      setNotice(
+        data.alreadyUnlocked
+          ? "Previously unlocked contact details loaded."
+          : "Contact details unlocked successfully."
+      );
+    } catch (error) {
+      setNotice(
+        error.message || "Unable to unlock contact details."
+      );
+    } finally {
+      setContactLoadingId(null);
     }
   };
 
@@ -509,7 +686,7 @@ const handleProtectedDiscover = async (event) => {
           padding: 32px;
           overflow: hidden;
           border-radius: 22px;
-          background: linear-gradient(115deg,#6d28d9 );
+          background: linear-gradient(115deg, #6d28d9, #8b5cf6);
           color: white;
         }
 
@@ -779,6 +956,51 @@ const handleProtectedDiscover = async (event) => {
           cursor: not-allowed;
         }
 
+        .as-dash-contact-button {
+          width: 100%;
+          margin-top: 9px;
+          padding: 10px 7px;
+          border: 1px solid #8b5cf6;
+          border-radius: 9px;
+          background: #f5f0ff;
+          color: #6d28d9;
+          font-size: 11px;
+          font-weight: 750;
+          cursor: pointer;
+        }
+
+        .as-dash-contact-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .as-dash-contact-box {
+          margin-top: 9px;
+          padding: 11px;
+          border: 1px solid #ddd6fe;
+          border-radius: 9px;
+          background: #faf8ff;
+          color: #43305f;
+          font-size: 11px;
+          line-height: 1.7;
+          overflow-wrap: anywhere;
+        }
+
+        .as-dash-contact-box p {
+          margin: 4px 0;
+        }
+
+        .as-dash-contact-balance {
+          margin: 0 0 15px;
+          padding: 11px 13px;
+          border: 1px solid #e7ddff;
+          border-radius: 10px;
+          background: #faf8ff;
+          color: #6d28d9;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
         .as-dash-profile-progress {
           margin-bottom: 25px;
           padding: 19px;
@@ -1018,8 +1240,6 @@ const handleProtectedDiscover = async (event) => {
         }
       `}</style>
 
-     
-
       <main className="as-dash-main">
         <section className="as-dash-welcome">
           <div>
@@ -1031,13 +1251,17 @@ const handleProtectedDiscover = async (event) => {
             <h1>Welcome back, {displayName}!</h1>
 
             <p>
-              Your journey to finding a life partner continues here. Discover
-              profiles, explore compatible matches, and take the next step
-              toward your future together.
+              Your journey to finding a life partner continues here.
+              Discover profiles, explore compatible matches, and take
+              the next step toward your future together.
             </p>
           </div>
 
-          <Link to="/subscription-plans" className="as-dash-welcome-button" onClick={handleProtectedDiscover}>
+          <Link
+            to="/subscription-plans"
+            className="as-dash-welcome-button"
+            onClick={handleProtectedDiscover}
+          >
             Discover Matches
             <ChevronRight size={17} />
           </Link>
@@ -1047,7 +1271,9 @@ const handleProtectedDiscover = async (event) => {
           <div className="as-dash-section-heading">
             <div>
               <h2>Your dashboard</h2>
-              <p>Here is a quick overview of your matrimony activity.</p>
+              <p>
+                Here is a quick overview of your matrimony activity.
+              </p>
             </div>
 
             <Link to="/my-profile" className="as-dash-text-link">
@@ -1061,8 +1287,12 @@ const handleProtectedDiscover = async (event) => {
                 <Users size={21} />
               </div>
               <div>
-                <div className="as-dash-stat-value">{matches.length}</div>
-                <div className="as-dash-stat-label">Suggested matches</div>
+                <div className="as-dash-stat-value">
+                  {matches.length}
+                </div>
+                <div className="as-dash-stat-label">
+                  Suggested matches
+                </div>
               </div>
             </div>
 
@@ -1074,7 +1304,9 @@ const handleProtectedDiscover = async (event) => {
                 <div className="as-dash-stat-value">
                   {savedProfiles.length}
                 </div>
-                <div className="as-dash-stat-label">Saved profiles</div>
+                <div className="as-dash-stat-label">
+                  Saved profiles
+                </div>
               </div>
             </div>
 
@@ -1086,7 +1318,9 @@ const handleProtectedDiscover = async (event) => {
                 <div className="as-dash-stat-value">
                   {sentInterests.length}
                 </div>
-                <div className="as-dash-stat-label">Interests sent</div>
+                <div className="as-dash-stat-label">
+                  Interests sent
+                </div>
               </div>
             </div>
 
@@ -1096,7 +1330,9 @@ const handleProtectedDiscover = async (event) => {
               </div>
               <div>
                 <div className="as-dash-stat-value">12</div>
-                <div className="as-dash-stat-label">Profile views</div>
+                <div className="as-dash-stat-label">
+                  Profile views
+                </div>
               </div>
             </div>
           </div>
@@ -1105,10 +1341,16 @@ const handleProtectedDiscover = async (event) => {
         <div className="as-dash-section-heading">
           <div>
             <h2>Find your compatible match</h2>
-            <p>Explore registered members and a few demo photos for layout testing.</p>
+            <p>
+              Explore registered members and a few demo photos for layout testing.
+            </p>
           </div>
 
-          <Link to="/subscription-plans" className="as-dash-text-link" onClick={handleProtectedDiscover}>
+          <Link
+            to="/subscription-plans"
+            className="as-dash-text-link"
+            onClick={handleProtectedDiscover}
+          >
             View all <ChevronRight size={16} />
           </Link>
         </div>
@@ -1124,39 +1366,73 @@ const handleProtectedDiscover = async (event) => {
               <Sparkles size={20} color="#8b5cf6" />
             </div>
 
+            {contactUnlockLimit > 0 && (
+              <div className="as-dash-contact-balance">
+                Contact unlocks remaining:{" "}
+                {contactUnlocksRemaining} / {contactUnlockLimit}
+                {" · "}
+                Used: {contactUnlocksUsed}
+              </div>
+            )}
+
             {matchesLoading && (
-              <p className="as-dash-match-detail">Loading registered profiles...</p>
+              <p className="as-dash-match-detail">
+                Loading registered profiles...
+              </p>
             )}
+
             {matchesError && (
-              <p className="as-dash-match-detail" role="alert">{matchesError}</p>
+              <p className="as-dash-match-detail" role="alert">
+                {matchesError}
+              </p>
             )}
+
             <div className="as-dash-match-grid">
               {[...matches, ...demoMatches].map((profile) => {
                 const isSaved = savedProfiles.includes(profile.id);
+
                 const receiverId =
                   typeof profile.user === "string"
                     ? profile.user
                     : profile.user?._id || profile.userId;
+
                 const interestSent =
-                  !profile.isDemo && Boolean(receiverId) &&
+                  !profile.isDemo &&
+                  Boolean(receiverId) &&
                   sentInterests.includes(String(receiverId));
-                const interestLoading = interestLoadingId === profile.id;
+
+                const interestLoading =
+                  interestLoadingId === profile.id;
+
+                const contactLoading =
+                  contactLoadingId === profile.id;
 
                 return (
-                  <article className="as-dash-match-card" key={profile.id}>
+                  <article
+                    className="as-dash-match-card"
+                    key={profile.id}
+                  >
                     <div className="as-dash-match-photo">
-                      <img src={profile.image} alt={profile.name} />
+                      <img
+                        src={profile.image}
+                        alt={profile.name}
+                        loading="lazy"
+                      />
 
                       <span className="as-dash-compatibility">
                         <CheckCircle2 size={12} />
-                        {profile.isDemo ? "Demo preview" : "Registered member"}
+                        {profile.isDemo
+                          ? "Demo preview"
+                          : "Registered member"}
                       </span>
 
                       <button
                         type="button"
                         className="as-dash-save"
                         aria-label={
-                          isSaved ? "Remove saved profile" : "Save profile"
+                          isSaved
+                            ? "Remove saved profile"
+                            : "Save profile"
                         }
                         onClick={() => toggleSave(profile.id)}
                       >
@@ -1169,7 +1445,8 @@ const handleProtectedDiscover = async (event) => {
 
                     <div className="as-dash-match-body">
                       <h4>
-                        {profile.name}{profile.age ? `, ${profile.age}` : ""}
+                        {profile.name}
+                        {profile.age ? `, ${profile.age}` : ""}
                       </h4>
 
                       <div className="as-dash-match-detail">
@@ -1193,9 +1470,17 @@ const handleProtectedDiscover = async (event) => {
                           interestSent ? "sent" : ""
                         }`}
                         onClick={() => handleSendInterest(profile)}
-                        disabled={profile.isDemo || interestSent || interestLoading}
+                        disabled={
+                          profile.isDemo ||
+                          interestSent ||
+                          interestLoading
+                        }
                         aria-busy={interestLoading}
-                        title={profile.isDemo ? "Demo preview only; use a registered member to send interest" : "Send interest"}
+                        title={
+                          profile.isDemo
+                            ? "Demo preview only; use a registered member to send interest"
+                            : "Send interest"
+                        }
                       >
                         {profile.isDemo
                           ? "Demo Preview"
@@ -1205,6 +1490,52 @@ const handleProtectedDiscover = async (event) => {
                               ? "Interest Sent"
                               : "Show Interest"}
                       </button>
+
+                      {!profile.isDemo && (
+                        <>
+                          <button
+                            type="button"
+                            className="as-dash-contact-button"
+                            onClick={() =>
+                              handleUnlockContact(profile)
+                            }
+                            disabled={
+                              contactLoading ||
+                              (
+                                !profile.contactUnlocked &&
+                                contactUnlocksRemaining <= 0
+                              )
+                            }
+                          >
+                            {contactLoading
+                              ? "Unlocking..."
+                              : profile.contactUnlocked
+                                ? "View Contact"
+                                : contactUnlocksRemaining > 0
+                                  ? "Unlock Contact"
+                                  : "No Unlocks Remaining"}
+                          </button>
+
+                          {profile.contactUnlocked &&
+                            profile.contactDetails && (
+                              <div className="as-dash-contact-box">
+                                <strong>Contact Information</strong>
+
+                                <p>
+                                  Email:{" "}
+                                  {profile.contactDetails.email ||
+                                    "Not available"}
+                                </p>
+
+                                <p>
+                                  Mobile:{" "}
+                                  {profile.contactDetails.mobile ||
+                                    "Not available"}
+                                </p>
+                              </div>
+                            )}
+                        </>
+                      )}
                     </div>
                   </article>
                 );
@@ -1225,6 +1556,7 @@ const handleProtectedDiscover = async (event) => {
                   <h3>Profile completion</h3>
                   <p>Make your profile stand out</p>
                 </div>
+
                 <UserRound size={21} color="#8b5cf6" />
               </div>
 
@@ -1250,7 +1582,10 @@ const handleProtectedDiscover = async (event) => {
                 potential matches get to know you better.
               </p>
 
-              <Link to="/my-profile" className="as-dash-outline-button">
+              <Link
+                to="/my-profile"
+                className="as-dash-outline-button"
+              >
                 <Camera size={15} />
                 Complete My Profile
               </Link>
@@ -1262,6 +1597,7 @@ const handleProtectedDiscover = async (event) => {
                   <h3>Quick actions</h3>
                   <p>Manage your account</p>
                 </div>
+
                 <Settings size={19} color="#8b5cf6" />
               </div>
 
@@ -1270,7 +1606,10 @@ const handleProtectedDiscover = async (event) => {
                   const ActivityIcon = activity.icon;
 
                   return (
-                    <div className="as-dash-activity" key={activity.id}>
+                    <div
+                      className="as-dash-activity"
+                      key={activity.id}
+                    >
                       <div className="as-dash-activity-icon">
                         <ActivityIcon size={18} />
                       </div>
@@ -1313,7 +1652,9 @@ const handleProtectedDiscover = async (event) => {
       </main>
 
       <footer className="as-dash-footer">
-        <span>© {new Date().getFullYear()} Wowmate. All rights reserved.</span>
+        <span>
+          © {new Date().getFullYear()} Wowmate. All rights reserved.
+        </span>
 
         <div className="as-dash-footer-links">
           <Link to="/privacy-policy">Privacy</Link>
@@ -1324,4 +1665,3 @@ const handleProtectedDiscover = async (event) => {
     </div>
   );
 }
-
