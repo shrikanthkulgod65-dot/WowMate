@@ -17,6 +17,11 @@ const interestSchema = new mongoose.Schema(
       index: true,
     },
 
+    isPriority: {
+      type: Boolean,
+      default: false,
+    },
+
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected"],
@@ -29,13 +34,11 @@ const interestSchema = new mongoose.Schema(
   }
 );
 
-// A user cannot send duplicate interests to the same person.
 interestSchema.index(
   { sender: 1, receiver: 1 },
   { unique: true }
 );
 
-// Prevent a user from expressing interest in themselves.
 interestSchema.pre("validate", function () {
   if (
     this.sender &&
@@ -46,6 +49,8 @@ interestSchema.pre("validate", function () {
   }
 });
 
-const Interest = mongoose.model("Interest", interestSchema);
+const Interest =
+  mongoose.models.Interest ||
+  mongoose.model("Interest", interestSchema);
 
 export default Interest;

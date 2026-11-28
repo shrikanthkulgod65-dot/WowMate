@@ -904,11 +904,14 @@ export default function About() {
           </div>
 
           <div className="about-story-image">
-            <img
-              src="/image.png"
-              alt="WowMate Logo"
-              loading="lazy"
-            />
+           <img
+  src="/wowmate-logo.webp"
+  alt="Wowmate Matrimony"
+  className="navbar-logo-image"
+  width="175"
+  height="58"
+  fetchPriority="high"
+/>
           </div>
         </div>
       </section>

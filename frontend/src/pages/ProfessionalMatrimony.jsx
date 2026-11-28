@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
-  MapPin,
-  Heart,
   ShieldCheck,
   BriefcaseBusiness,
   GraduationCap,
@@ -13,53 +11,6 @@ import {
   ArrowRight,
   Users,
 } from "lucide-react";
-
-const professionalProfiles = [
-  {
-    id: 1,
-    name: "Aarav",
-    age: 29,
-    location: "Bengaluru, Karnataka",
-    profession: "Software Engineer",
-    education: "B.Tech",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600",
-    description: "Technology professional with family values",
-  },
-  {
-    id: 2,
-    name: "Ananya",
-    age: 27,
-    location: "Pune, Maharashtra",
-    profession: "Doctor",
-    education: "MBBS",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600",
-    description: "Healthcare professional who values family",
-  },
-  {
-    id: 3,
-    name: "Rohan",
-    age: 31,
-    location: "Hyderabad, Telangana",
-    profession: "Business Professional",
-    education: "MBA",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600",
-    description: "Business-minded and family-oriented",
-  },
-  {
-    id: 4,
-    name: "Meera",
-    age: 26,
-    location: "Mumbai, Maharashtra",
-    profession: "IT Professional",
-    education: "M.Tech",
-    image:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600",
-    description: "Career-focused and values meaningful relationships",
-  },
-];
 
 const professionCategories = [
   {
@@ -186,7 +137,6 @@ const handleProtectedProfileNavigation = async (event) => {
   const [maxAge, setMaxAge] = useState("32");
   const [location, setLocation] = useState("");
   const [profession, setProfession] = useState("Any Profession");
-  const [savedProfiles, setSavedProfiles] = useState([]);
 
   const handleSearch = (event) => {
     event.preventDefault();
@@ -201,14 +151,6 @@ const handleProtectedProfileNavigation = async (event) => {
     });
 
     navigate(`/search-results?${params.toString()}`);
-  };
-
-  const toggleSaved = (id) => {
-    setSavedProfiles((previous) =>
-      previous.includes(id)
-        ? previous.filter((profileId) => profileId !== id)
-        : [...previous, id]
-    );
   };
 
   return (
@@ -801,94 +743,37 @@ const handleProtectedProfileNavigation = async (event) => {
         </form>
       </section>
 
-      {/* FEATURED PROFILES */}
+      {/* PROFESSIONAL PROFILE DISCOVERY */}
       <section className="pro-section">
         <div className="pro-container">
           <div className="pro-heading">
             <span>Discover Your Match</span>
-            <h2>Featured Professional Profiles</h2>
+            <h2>Explore Professional Matrimony Profiles</h2>
             <p>
-              Explore sample profiles representing different careers,
-              educational backgrounds, and life goals.
+              Browse registered members, review their professional
+              backgrounds, and discover profiles that match your preferences.
             </p>
           </div>
 
-          <div className="pro-profile-grid">
-            {professionalProfiles.map((profile) => (
-              <article className="pro-profile-card" key={profile.id}>
-                <img
-                  className="pro-profile-image"
-                  src={profile.image}
-                  alt={`Sample profile of ${profile.name}`}
-                  loading="lazy"
-                />
-
-                <div className="pro-profile-body">
-                  <div className="pro-profile-top">
-                    <h3>
-                      {profile.name}, {profile.age}
-                    </h3>
-
-                    <button
-                      type="button"
-                      className={`pro-save ${
-                        savedProfiles.includes(profile.id) ? "is-saved" : ""
-                      }`}
-                      aria-label={
-                        savedProfiles.includes(profile.id)
-                          ? `Unsave ${profile.name}`
-                          : `Save ${profile.name}`
-                      }
-                      aria-pressed={savedProfiles.includes(profile.id)}
-                      onClick={() => toggleSaved(profile.id)}
-                    >
-                      <Heart
-                        size={19}
-                        fill={
-                          savedProfiles.includes(profile.id)
-                            ? "currentColor"
-                            : "none"
-                        }
-                      />
-                    </button>
-                  </div>
-
-                  <div className="pro-profile-meta">
-                    <div>
-                      <MapPin
-                        size={14}
-                        style={{
-                          display: "inline",
-                          verticalAlign: "middle",
-                          marginRight: 5,
-                        }}
-                      />
-                      {profile.location}
-                    </div>
-                    <div>{profile.education}</div>
-                    <div>{profile.description}</div>
-                  </div>
-
-                  <span className="pro-profile-tag">
-                    {profile.profession}
-                  </span>
-
-                  <Link to="/subscription-plans" className="pro-profile-link" onClick={handleProtectedProfileNavigation}>
-                    View Profile <ArrowRight size={17} />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: 38 }}>
-            <Link to="/subscription-plans" className="pro-btn" onClick={handleProtectedProfileNavigation}>
-              Explore More Profiles <ArrowRight size={18} />
+          <div className="pro-benefit-card" style={{ maxWidth: "820px", margin: "0 auto", textAlign: "center" }}>
+            <div className="pro-benefit-icon" style={{ margin: "0 auto 20px" }}>
+              <BriefcaseBusiness size={30} />
+            </div>
+            <h3>Meet Registered Professionals</h3>
+            <p>
+              Explore real member profiles in the secure discovery area.
+              Sign in and check your membership access to continue.
+            </p>
+            <Link
+              to="/subscription-plans"
+              className="pro-btn"
+              onClick={handleProtectedProfileNavigation}
+            >
+              Explore Real Profiles <ArrowRight size={18} />
             </Link>
           </div>
         </div>
       </section>
-
       {/* PROFESSIONAL CATEGORIES */}
       <section className="pro-section pro-categories">
         <div className="pro-container">

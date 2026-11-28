@@ -491,10 +491,13 @@ export default function Footer() {
                 aria-label="Wowmate home"
               >
                 <img
-                  src="/image.png"
-                  alt="Wowmate logo"
-                  className="footer-logo"
-                />
+  src="/wowmate-logo.webp"
+  alt="Wowmate Matrimony"
+  className="navbar-logo-image"
+  width="175"
+  height="58"
+  fetchPriority="high"
+/>
               </Link>
 
               <div>

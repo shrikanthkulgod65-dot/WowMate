@@ -1,8 +1,10 @@
 
 import Subscription from "../models/Subscription.js";
+import Interest from "../models/Interest.js";
+import ContactUnlock from "../models/ContactUnlock.js";
 import { getPlan, getPublicPlans } from "../config/subscriptionPlans.js";
 
-// Public: Get all available plans
+// Public: Get all available plans.
 export const getSubscriptionPlans = (req, res) => {
   return res.status(200).json({
     success: true,
@@ -10,15 +12,15 @@ export const getSubscriptionPlans = (req, res) => {
   });
 };
 
-// Authenticated: Get the logged-in user's subscription
+// Authenticated: Get the logged-in user's subscription.
 export const getMySubscription = async (req, res) => {
   try {
     const now = new Date();
+    const userId = req.user._id || req.user.id;
 
-    // Mark expired subscriptions automatically when checked.
     await Subscription.updateMany(
       {
-        user: req.user._id,
+        user: userId,
         status: "active",
         expiresAt: { $lte: now },
       },
@@ -28,7 +30,7 @@ export const getMySubscription = async (req, res) => {
     );
 
     const subscription = await Subscription.findOne({
-      user: req.user._id,
+      user: userId,
       status: "active",
       startsAt: { $lte: now },
       expiresAt: { $gt: now },
@@ -45,12 +47,96 @@ export const getMySubscription = async (req, res) => {
 
     const plan = getPlan(subscription.plan);
 
+    if (!plan) {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid subscription plan.",
+      });
+    }
+
+    const periodStart =
+      subscription.startsAt || subscription.createdAt;
+
+    const periodFilter = {
+      createdAt: {
+        $gte: periodStart,
+        $lt: now,
+      },
+    };
+
+    const [
+      actualInterests,
+      actualPriorityInterests,
+      actualContactUnlocks,
+    ] = await Promise.all([
+      Interest.countDocuments({
+        sender: userId,
+        ...periodFilter,
+      }),
+
+      Interest.countDocuments({
+        sender: userId,
+        isPriority: true,
+        ...periodFilter,
+      }),
+
+      ContactUnlock.countDocuments({
+        member: userId,
+        subscription: subscription._id,
+      }),
+    ]);
+
+    const interestsUsed = Math.max(
+      subscription.interestsUsed || 0,
+      actualInterests
+    );
+
+    const priorityInterestsUsed = Math.max(
+      subscription.priorityInterestsUsed || 0,
+      actualPriorityInterests
+    );
+
+    const contactUnlocksUsed = Math.max(
+      subscription.contactUnlocksUsed || 0,
+      actualContactUnlocks
+    );
+
     return res.status(200).json({
       success: true,
       active: true,
       subscription,
       features: plan.features,
-      interestLimit: plan.interestLimit,
+
+      entitlements: {
+        interestLimit: plan.interestLimit,
+        interestsUsed,
+        interestsRemaining:
+          plan.interestLimit === -1
+            ? "Unlimited"
+            : Math.max(0, plan.interestLimit - interestsUsed),
+
+        contactUnlockLimit: plan.contactUnlockLimit,
+        contactUnlocksUsed,
+        contactUnlocksRemaining: Math.max(
+          0,
+          plan.contactUnlockLimit - contactUnlocksUsed
+        ),
+
+        priorityInterestLimit: plan.priorityInterestLimit,
+        priorityInterestsUsed,
+        priorityInterestsRemaining: Math.max(
+          0,
+          plan.priorityInterestLimit - priorityInterestsUsed
+        ),
+
+        profileBoostLimit: plan.profileBoostLimit,
+        profileBoostsUsed: subscription.profileBoostsUsed || 0,
+        profileBoostsRemaining: Math.max(
+          0,
+          plan.profileBoostLimit -
+            (subscription.profileBoostsUsed || 0)
+        ),
+      },
     });
   } catch (error) {
     console.error("Get subscription error:", error);

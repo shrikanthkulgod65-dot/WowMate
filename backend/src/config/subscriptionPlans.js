@@ -6,18 +6,22 @@ export const subscriptionPlans = {
     price: 9,
     durationDays: 7,
     interestLimit: 3,
+    contactUnlockLimit: 3,
+    priorityInterestLimit: 0,
+    profileBoostLimit: 0,
     features: {
       createProfile: true,
       browsePublicProfiles: true,
       basicMatchmaking: true,
       limitedProfileDetails: true,
       exploreBrokers: true,
-      contactDetails: false,
+      contactDetails: true,
       advancedFilters: false,
       favourites: false,
       priorityVisibility: false,
       prioritySupport: false,
       protectedBrokerDetails: false,
+      profileBoosts: false,
     },
   },
 
@@ -26,7 +30,10 @@ export const subscriptionPlans = {
     name: "Silver",
     price: 299,
     durationDays: 30,
-    interestLimit: 25,
+    interestLimit: 30,
+    contactUnlockLimit: 10,
+    priorityInterestLimit: 2,
+    profileBoostLimit: 0,
     features: {
       createProfile: true,
       browsePublicProfiles: true,
@@ -39,6 +46,7 @@ export const subscriptionPlans = {
       priorityVisibility: false,
       prioritySupport: false,
       protectedBrokerDetails: true,
+      profileBoosts: false,
     },
   },
 
@@ -46,8 +54,11 @@ export const subscriptionPlans = {
     id: "gold",
     name: "Gold",
     price: 699,
-    durationDays: 90,
-    interestLimit: -1,
+    durationDays: 30,
+    interestLimit: 100,
+    contactUnlockLimit: 30,
+    priorityInterestLimit: 10,
+    profileBoostLimit: 5,
     features: {
       createProfile: true,
       browsePublicProfiles: true,
@@ -60,14 +71,13 @@ export const subscriptionPlans = {
       priorityVisibility: true,
       prioritySupport: true,
       protectedBrokerDetails: true,
+      profileBoosts: true,
     },
   },
 };
 
-export const getPlan = (planId) => {
-  return subscriptionPlans[planId] || null;
-};
+export const getPlan = (planId) =>
+  subscriptionPlans[planId] || null;
 
-export const getPublicPlans = () => {
-  return Object.values(subscriptionPlans);
-};
+export const getPublicPlans = () =>
+  Object.values(subscriptionPlans);

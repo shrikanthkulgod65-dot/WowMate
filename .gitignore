@@ -17,3 +17,11 @@ frontend/.env
 *.step*-backup
 
 *.bak-*
+
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Production build output
+dist/
+**/dist/

@@ -853,7 +853,7 @@ export default function Register() {
 
       <style>{`
 
-        @import url('image.png');
+
 
 
 
@@ -2465,14 +2465,13 @@ export default function Register() {
       <Link to="/" className="as-register-brand" aria-label="Wowmate home">
 
         <img
-
-          src="/image.png"
-
-          alt="Wowmate - Rishton Ki Nayi Shuruaat"
-
-          className="as-register-logo"
-
-        />
+  src="/wowmate-logo.webp"
+  alt="Wowmate Matrimony"
+  className="navbar-logo-image"
+  width="175"
+  height="58"
+  fetchPriority="high"
+/>
 
       </Link>
 

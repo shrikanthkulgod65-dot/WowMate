@@ -1,8 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
-  MapPin,
   Heart,
   ShieldCheck,
   Users,
@@ -11,57 +11,19 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-const farmerProfiles = [
-  {
-    id: 1,
-    name: "Rahul",
-    age: 28,
-    location: "Belagavi, Karnataka",
-    profession: "Farmer",
-    education: "B.Sc. Agriculture",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600",
-    details: "Family-owned agricultural land",
-  },
-  {
-    id: 2,
-    name: "Priya",
-    age: 25,
-    location: "Dharwad, Karnataka",
-    profession: "Agriculture Professional",
-    education: "B.Sc. Agriculture",
-    image:
-      "farmer1.png",
-    details: "Values family and tradition",
-  },
-  {
-    id: 3,
-    name: "Vikram",
-    age: 30,
-    location: "Vijayapura, Karnataka",
-    profession: "Progressive Farmer",
-    education: "Graduate",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600",
-    details: "Modern farming and family values",
-  },
-  {
-    id: 4,
-    name: "Sneha",
-    age: 26,
-    location: "Bagalkot, Karnataka",
-    profession: "Agriculture Professional",
-    education: "Postgraduate",
-    image:
-      "farmer2.png",
-    details: "Interested in a family-oriented match",
-  },
-];
-
 export default function FarmerMatrimony() {
   const navigate = useNavigate();
 
-const handleProtectedProfileNavigation = async (event) => {
+  const [homeUser, setHomeUser] = useState(null);
+  const [homeProfile, setHomeProfile] = useState(null);
+
+  const [lookingFor, setLookingFor] = useState("Bride");
+  const [minAge, setMinAge] = useState("21");
+  const [maxAge, setMaxAge] = useState("30");
+  const [location, setLocation] = useState("");
+
+  // Verify subscription before opening protected profile discovery.
+  const handleProtectedProfileNavigation = async (event) => {
     event.preventDefault();
 
     const token =
@@ -75,6 +37,7 @@ const handleProtectedProfileNavigation = async (event) => {
 
     try {
       const response = await fetch("/api/subscriptions/me", {
+        method: "GET",
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${token}`,
@@ -94,19 +57,22 @@ const handleProtectedProfileNavigation = async (event) => {
     }
   };
 
-  const [homeUser, setHomeUser] = useState(null);
-  const [homeProfile, setHomeProfile] = useState(null);
-
+  // Keep the account action synchronized with login/logout.
   useEffect(() => {
     const refreshHomeAccount = () => {
       try {
         const savedUser =
           window.localStorage.getItem("user") ||
           window.sessionStorage.getItem("user");
+
         const user = savedUser ? JSON.parse(savedUser) : null;
+
         setHomeUser(user);
 
-        if (!user || String(user.role || "").toLowerCase() !== "user") {
+        if (
+          !user ||
+          String(user.role || "").toLowerCase() !== "user"
+        ) {
           setHomeProfile(null);
           return;
         }
@@ -114,72 +80,101 @@ const handleProtectedProfileNavigation = async (event) => {
         const savedProfiles = window.localStorage.getItem(
           "apnishaadi_registered_profiles"
         );
-        const profiles = savedProfiles ? JSON.parse(savedProfiles) : [];
+
+        const profiles = savedProfiles
+          ? JSON.parse(savedProfiles)
+          : [];
+
         const profile = Array.isArray(profiles)
           ? profiles.find(
               (item) =>
                 item.id === `member-${user.id || user._id}` ||
-                item.email?.toLowerCase() === user.email?.toLowerCase()
+                item.email?.toLowerCase() ===
+                  user.email?.toLowerCase()
             ) || null
           : null;
 
         setHomeProfile(profile);
       } catch (error) {
-        console.error("Unable to load the page account profile:", error);
+        console.error(
+          "Unable to load the page account profile:",
+          error
+        );
+
         setHomeUser(null);
         setHomeProfile(null);
       }
     };
 
     refreshHomeAccount();
+
     window.addEventListener("authChanged", refreshHomeAccount);
     window.addEventListener("storage", refreshHomeAccount);
-    window.addEventListener("apnishaadi-profiles-updated", refreshHomeAccount);
+    window.addEventListener(
+      "apnishaadi-profiles-updated",
+      refreshHomeAccount
+    );
 
     return () => {
-      window.removeEventListener("authChanged", refreshHomeAccount);
-      window.removeEventListener("storage", refreshHomeAccount);
-      window.removeEventListener("apnishaadi-profiles-updated", refreshHomeAccount);
+      window.removeEventListener(
+        "authChanged",
+        refreshHomeAccount
+      );
+
+      window.removeEventListener(
+        "storage",
+        refreshHomeAccount
+      );
+
+      window.removeEventListener(
+        "apnishaadi-profiles-updated",
+        refreshHomeAccount
+      );
     };
   }, []);
 
-  const homeRole = String(homeUser?.role || "").toLowerCase();
+  const homeRole = String(
+    homeUser?.role || ""
+  ).toLowerCase();
+
   const homeAction =
     homeRole === "broker"
-      ? { label: "My Broker Workspace →", link: "/broker-matrimony" }
+      ? {
+          label: "My Broker Workspace →",
+          link: "/broker-matrimony",
+        }
       : homeRole === "user"
         ? {
-            label: homeProfile ? "View My Profile →" : "Complete Your Profile →",
+            label: homeProfile
+              ? "View My Profile →"
+              : "Complete Your Profile →",
             link: "/dashboard",
           }
-        : { label: "Create Your Profile →", link: "/register" };
+        : {
+            label: "Create Your Profile →",
+            link: "/register",
+          };
 
-  const [lookingFor, setLookingFor] = useState("Bride");
-  const [minAge, setMinAge] = useState("21");
-  const [maxAge, setMaxAge] = useState("30");
-  const [location, setLocation] = useState("");
-  const [savedProfiles, setSavedProfiles] = useState([]);
-
+  // Search only real farmer-category member profiles.
   const handleSearch = (event) => {
     event.preventDefault();
+
+    if (Number(minAge) > Number(maxAge)) {
+      window.alert(
+        "Minimum age cannot be greater than maximum age."
+      );
+      return;
+    }
 
     const params = new URLSearchParams({
       category: "farmer",
       lookingFor,
       minAge,
       maxAge,
-      location,
+      location: location.trim(),
     });
 
     navigate(`/search-results?${params.toString()}`);
-  };
-
-  const toggleSaved = (id) => {
-    setSavedProfiles((previous) =>
-      previous.includes(id)
-        ? previous.filter((profileId) => profileId !== id)
-        : [...previous, id]
-    );
   };
 
   return (
@@ -200,6 +195,8 @@ const handleProtectedProfileNavigation = async (event) => {
           box-sizing: border-box;
         }
 
+        /* HERO SECTION */
+
         .farmer-hero {
           min-height: 540px;
           display: flex;
@@ -207,8 +204,14 @@ const handleProtectedProfileNavigation = async (event) => {
           position: relative;
           overflow: hidden;
           background:
-            linear-gradient(90deg, rgba(15, 43, 24, .91), rgba(15, 43, 24, .66), rgba(15, 43, 24, .12)),
-            url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800") center/cover;
+            linear-gradient(
+              90deg,
+              rgba(15, 43, 24, .91),
+              rgba(15, 43, 24, .66),
+              rgba(15, 43, 24, .12)
+            ),
+            url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800")
+              center/cover;
         }
 
         .farmer-hero-content {
@@ -291,6 +294,8 @@ const handleProtectedProfileNavigation = async (event) => {
           color: var(--farmer-dark);
         }
 
+        /* SEARCH SECTION */
+
         .farmer-search-wrap {
           max-width: 1150px;
           margin: -48px auto 0;
@@ -330,6 +335,8 @@ const handleProtectedProfileNavigation = async (event) => {
           outline-color: var(--farmer-primary);
         }
 
+        /* GENERAL SECTIONS */
+
         .farmer-section {
           padding: 82px 24px;
         }
@@ -366,110 +373,45 @@ const handleProtectedProfileNavigation = async (event) => {
           margin: 0;
         }
 
-        .farmer-profile-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 23px;
-        }
+        /* REAL PROFILE DISCOVERY CTA */
 
-        .farmer-profile-card {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          min-width: 0;
+        .farmer-discovery-panel {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 42px 28px;
+          text-align: center;
+          border: 1px solid #e6def8;
+          border-radius: 18px;
           background: #fff;
-          border: 1px solid #e8ece4;
-          border-radius: 14px;
-          overflow: hidden;
-          box-shadow: 0 7px 25px rgba(25, 55, 30, .06);
-          transition: transform .25s ease, box-shadow .25s ease;
+          box-shadow: 0 10px 35px rgba(50, 35, 80, .07);
         }
 
-        .farmer-profile-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 15px 35px rgba(25, 55, 30, .12);
-        }
-
-        .farmer-profile-image {
-          display: block;
-          width: 100%;
-          height: 300px;
-          min-height: 300px;
-          flex: 0 0 300px;
-          object-fit: cover;
-          object-position: center top;
-          background: #edf1e8;
-        }
-
-        .farmer-profile-body {
-          display: flex;
-          flex: 1;
-          flex-direction: column;
-          min-width: 0;
-          padding: 20px;
-        }
-
-        .farmer-profile-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-        }
-
-        .farmer-profile-top h3 {
-          margin: 0;
-          color: var(--farmer-dark);
-          font-size: 20px;
-        }
-
-        .farmer-save {
-          border: 0;
-          background: #f2f6ef;
-          color: #60715d;
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          cursor: pointer;
+        .farmer-discovery-icon {
           display: grid;
           place-items: center;
-        }
-
-        .farmer-save.is-saved {
-          color: #c62848;
-          background: #fff0f3;
-        }
-
-        .farmer-profile-meta {
-          color: #73776e;
-          font-size: 13px;
-          line-height: 1.7;
-          margin: 12px 0;
-        }
-
-        .farmer-profile-tag {
-          display: inline-block;
-          background: #eef5e9;
-          color: #315b37;
-          border-radius: 20px;
-          padding: 6px 10px;
-          font-size: 11px;
-          font-weight: 700;
-          margin: 4px 3px 12px 0;
-        }
-
-        .farmer-profile-link {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 8px;
-          margin-top: auto;
-          padding-top: 14px;
-          border-top: 1px solid #edf0e9;
+          width: 68px;
+          height: 68px;
+          margin: 0 auto 20px;
+          border-radius: 50%;
+          background: #f1eaff;
           color: var(--farmer-primary);
-          text-decoration: none;
-          font-weight: 700;
-          font-size: 13px;
         }
+
+        .farmer-discovery-panel h3 {
+          color: var(--farmer-dark);
+          font-size: 23px;
+          margin: 0 0 13px;
+        }
+
+        .farmer-discovery-panel p {
+          max-width: 600px;
+          margin: 0 auto 24px;
+          color: #74776f;
+          line-height: 1.8;
+          font-size: 14px;
+        }
+
+        /* BENEFITS */
 
         .farmer-benefits {
           background: var(--farmer-cream);
@@ -512,6 +454,8 @@ const handleProtectedProfileNavigation = async (event) => {
           font-size: 14px;
         }
 
+        /* INFORMATION STATS */
+
         .farmer-stats {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -539,14 +483,21 @@ const handleProtectedProfileNavigation = async (event) => {
           font-size: 13px;
         }
 
+        /* FINAL CALL TO ACTION */
+
         .farmer-cta {
           margin: 0 24px 80px;
           padding: 55px 25px;
           border-radius: 20px;
           text-align: center;
           background:
-            linear-gradient(120deg, rgba(24, 62, 39, .96), rgba(40, 92, 54, .92)),
-            url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800/") center/cover;
+            linear-gradient(
+              120deg,
+              rgba(24, 62, 39, .96),
+              rgba(40, 92, 54, .92)
+            ),
+            url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800")
+              center/cover;
           color: #fff;
         }
 
@@ -569,12 +520,10 @@ const handleProtectedProfileNavigation = async (event) => {
           color: #183e27;
         }
 
+        /* RESPONSIVE */
+
         @media (max-width: 1000px) {
           .farmer-search-card {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .farmer-profile-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
@@ -611,16 +560,13 @@ const handleProtectedProfileNavigation = async (event) => {
             padding: 60px 18px;
           }
 
-          .farmer-profile-grid,
           .farmer-benefit-grid,
           .farmer-stats {
             grid-template-columns: 1fr;
           }
 
-          .farmer-profile-image {
-            height: 300px;
-            min-height: 300px;
-            flex-basis: 300px;
+          .farmer-discovery-panel {
+            padding: 30px 20px;
           }
 
           .farmer-cta {
@@ -631,6 +577,7 @@ const handleProtectedProfileNavigation = async (event) => {
       `}</style>
 
       {/* HERO SECTION */}
+
       <section className="farmer-hero">
         <div className="farmer-hero-content">
           <div className="farmer-eyebrow">
@@ -645,8 +592,9 @@ const handleProtectedProfileNavigation = async (event) => {
           </h1>
 
           <p>
-            Find a life partner who understands your roots, respects your
-            family values, and shares your dreams for a beautiful future.
+            Find a life partner who understands your roots, respects
+            your family values, and shares your dreams for a
+            beautiful future.
           </p>
 
           <div className="farmer-hero-actions">
@@ -654,7 +602,10 @@ const handleProtectedProfileNavigation = async (event) => {
               Find Your Match <ArrowRight size={18} />
             </a>
 
-            <Link to={homeAction.link} className="farmer-btn farmer-btn-light">
+            <Link
+              to={homeAction.link}
+              className="farmer-btn farmer-btn-light"
+            >
               {homeAction.label}
             </Link>
           </div>
@@ -662,18 +613,27 @@ const handleProtectedProfileNavigation = async (event) => {
       </section>
 
       {/* SEARCH SECTION */}
+
       <section
         className="farmer-search-wrap"
         id="farmer-search"
         aria-label="Search farmer matrimony profiles"
       >
-        <form className="farmer-search-card" onSubmit={handleSearch}>
+        <form
+          className="farmer-search-card"
+          onSubmit={handleSearch}
+        >
           <div className="farmer-field">
-            <label htmlFor="farmer-looking-for">I'm looking for</label>
+            <label htmlFor="farmer-looking-for">
+              I'm looking for
+            </label>
+
             <select
               id="farmer-looking-for"
               value={lookingFor}
-              onChange={(event) => setLookingFor(event.target.value)}
+              onChange={(event) =>
+                setLookingFor(event.target.value)
+              }
             >
               <option value="Bride">Bride</option>
               <option value="Groom">Groom</option>
@@ -681,47 +641,64 @@ const handleProtectedProfileNavigation = async (event) => {
           </div>
 
           <div className="farmer-field">
-            <label htmlFor="farmer-min-age">Minimum age</label>
+            <label htmlFor="farmer-min-age">
+              Minimum age
+            </label>
+
             <select
               id="farmer-min-age"
               value={minAge}
-              onChange={(event) => setMinAge(event.target.value)}
+              onChange={(event) =>
+                setMinAge(event.target.value)
+              }
             >
-              {Array.from({ length: 18 }, (_, index) => index + 18).map(
-                (age) => (
-                  <option key={age} value={age}>
-                    {age} years
-                  </option>
-                )
-              )}
+              {Array.from(
+                { length: 18 },
+                (_, index) => index + 18
+              ).map((age) => (
+                <option key={age} value={age}>
+                  {age} years
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="farmer-field">
-            <label htmlFor="farmer-max-age">Maximum age</label>
+            <label htmlFor="farmer-max-age">
+              Maximum age
+            </label>
+
             <select
               id="farmer-max-age"
               value={maxAge}
-              onChange={(event) => setMaxAge(event.target.value)}
+              onChange={(event) =>
+                setMaxAge(event.target.value)
+              }
             >
-              {Array.from({ length: 23 }, (_, index) => index + 21).map(
-                (age) => (
-                  <option key={age} value={age}>
-                    {age} years
-                  </option>
-                )
-              )}
+              {Array.from(
+                { length: 23 },
+                (_, index) => index + 21
+              ).map((age) => (
+                <option key={age} value={age}>
+                  {age} years
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="farmer-field">
-            <label htmlFor="farmer-location">Preferred location</label>
+            <label htmlFor="farmer-location">
+              Preferred location
+            </label>
+
             <input
               id="farmer-location"
               type="text"
               placeholder="City or state"
               value={location}
-              onChange={(event) => setLocation(event.target.value)}
+              onChange={(event) =>
+                setLocation(event.target.value)
+              }
             />
           </div>
 
@@ -731,100 +708,53 @@ const handleProtectedProfileNavigation = async (event) => {
         </form>
       </section>
 
-      {/* FEATURED PROFILES */}
+      {/* REAL MEMBER DISCOVERY */}
+
       <section className="farmer-section">
         <div className="farmer-container">
           <div className="farmer-section-heading">
             <span>Discover Your Match</span>
-            <h2>Featured Farmer Profiles</h2>
+            <h2>Explore Farmer Matrimony Profiles</h2>
             <p>
-              Explore sample profiles of people who value agriculture,
-              tradition, family, and a meaningful partnership.
+              Find registered members who value agriculture,
+              tradition, family, and meaningful partnerships.
             </p>
           </div>
 
-          <div className="farmer-profile-grid">
-            {farmerProfiles.map((profile) => (
-              <article className="farmer-profile-card" key={profile.id}>
-                <img
-                  className="farmer-profile-image"
-                  src={profile.image}
-                  alt={`Sample profile of ${profile.name}`}
-                  loading="lazy"
-                />
+          <div className="farmer-discovery-panel">
+            <div className="farmer-discovery-icon">
+              <Sprout size={32} />
+            </div>
 
-                <div className="farmer-profile-body">
-                  <div className="farmer-profile-top">
-                    <h3>
-                      {profile.name}, {profile.age}
-                    </h3>
+            <h3>Meet Registered Members</h3>
 
-                    <button
-                      type="button"
-                      className={`farmer-save ${
-                        savedProfiles.includes(profile.id) ? "is-saved" : ""
-                      }`}
-                      aria-label={
-                        savedProfiles.includes(profile.id)
-                          ? `Unsave ${profile.name}`
-                          : `Save ${profile.name}`
-                      }
-                      aria-pressed={savedProfiles.includes(profile.id)}
-                      onClick={() => toggleSaved(profile.id)}
-                    >
-                      <Heart
-                        size={19}
-                        fill={
-                          savedProfiles.includes(profile.id)
-                            ? "currentColor"
-                            : "none"
-                        }
-                      />
-                    </button>
-                  </div>
+            <p>
+              Explore genuine member profiles and find people
+              who understand farming life, rural communities,
+              family traditions, and your future goals.
+            </p>
 
-                  <div className="farmer-profile-meta">
-                    <div>
-                      <MapPin
-                        size={14}
-                        style={{
-                          display: "inline",
-                          verticalAlign: "middle",
-                          marginRight: 5,
-                        }}
-                      />
-                      {profile.location}
-                    </div>
-                    <div>{profile.education}</div>
-                    <div>{profile.details}</div>
-                  </div>
-
-                  <span className="farmer-profile-tag">
-                    {profile.profession}
-                  </span>
-
-                  <Link to="/subscription-plans" className="farmer-profile-link" onClick={handleProtectedProfileNavigation}>
-                    View Profile <ArrowRight size={17} />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: 38 }}>
-            <Link to="/subscription-plans" className="farmer-btn" onClick={handleProtectedProfileNavigation}>
-              Explore More Profiles <ArrowRight size={18} />
+            <Link
+              to="/subscription-plans"
+              className="farmer-btn"
+              onClick={handleProtectedProfileNavigation}
+            >
+              Discover Real Profiles
+              <ArrowRight size={18} />
             </Link>
           </div>
         </div>
       </section>
 
       {/* WHY FARMER MATRIMONY */}
+
       <section className="farmer-section farmer-benefits">
         <div className="farmer-container">
           <div className="farmer-section-heading">
             <span>Rooted in Values</span>
+
             <h2>A Match That Understands Your World</h2>
+
             <p>
               A meaningful relationship begins with understanding,
               respect, shared values, and trust between families.
@@ -836,10 +766,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <div className="farmer-benefit-icon">
                 <Sprout size={27} />
               </div>
+
               <h3>Shared Agricultural Values</h3>
+
               <p>
-                Discover people who understand farming life, rural
-                communities, and the importance of agricultural traditions.
+                Discover people who understand farming life,
+                rural communities, and the importance of
+                agricultural traditions.
               </p>
             </article>
 
@@ -847,10 +780,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <div className="farmer-benefit-icon">
                 <Users size={27} />
               </div>
+
               <h3>Family Compatibility</h3>
+
               <p>
-                Search for a partner whose family values, lifestyle,
-                and future goals are compatible with yours.
+                Search for a partner whose family values,
+                lifestyle, and future goals are compatible
+                with yours.
               </p>
             </article>
 
@@ -858,10 +794,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <div className="farmer-benefit-icon">
                 <ShieldCheck size={27} />
               </div>
+
               <h3>Privacy and Trust</h3>
+
               <p>
-                Build a profile and explore matches while keeping your
-                privacy in mind. Always verify a person's identity independently.
+                Build a profile and explore matches while
+                keeping your privacy in mind. Always verify
+                a person's identity independently.
               </p>
             </article>
           </div>
@@ -871,9 +810,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <strong>
                 <Users
                   size={23}
-                  style={{ display: "inline", verticalAlign: "middle" }}
+                  style={{
+                    display: "inline",
+                    verticalAlign: "middle",
+                  }}
                 />
               </strong>
+
               <span>Community-focused matching</span>
             </div>
 
@@ -881,9 +824,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <strong>
                 <Heart
                   size={23}
-                  style={{ display: "inline", verticalAlign: "middle" }}
+                  style={{
+                    display: "inline",
+                    verticalAlign: "middle",
+                  }}
                 />
               </strong>
+
               <span>Meaningful relationships</span>
             </div>
 
@@ -891,9 +838,13 @@ const handleProtectedProfileNavigation = async (event) => {
               <strong>
                 <CheckCircle
                   size={23}
-                  style={{ display: "inline", verticalAlign: "middle" }}
+                  style={{
+                    display: "inline",
+                    verticalAlign: "middle",
+                  }}
                 />
               </strong>
+
               <span>Compatibility-focused search</span>
             </div>
           </div>
@@ -901,19 +852,20 @@ const handleProtectedProfileNavigation = async (event) => {
       </section>
 
       {/* FINAL CALL TO ACTION */}
+
       <section className="farmer-cta">
         <h2>Your Roots. Your Values. Your Forever.</h2>
+
         <p>
-          Start discovering potential life partners who appreciate your
-          lifestyle and share your hopes for the future.
+          Start discovering potential life partners who appreciate
+          your lifestyle and share your hopes for the future.
         </p>
 
         <Link to={homeAction.link} className="farmer-btn">
-          {homeAction.label} <ArrowRight size={18} />
+          {homeAction.label}
+          <ArrowRight size={18} />
         </Link>
       </section>
     </main>
   );
 }
-
-

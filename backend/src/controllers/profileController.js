@@ -1,6 +1,7 @@
 
 import Profile from "../models/Profile.js";
 import Subscription from "../models/Subscription.js";
+import ContactUnlock from "../models/ContactUnlock.js";
 import { getPlan } from "../config/subscriptionPlans.js";
 
 const escapeRegex = (value) =>
@@ -11,7 +12,9 @@ function parseInteger(value, fallback, minimum, maximum) {
 
   const parsed = Number(value);
 
-  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
+  return Number.isInteger(parsed) &&
+    parsed >= minimum &&
+    parsed <= maximum
     ? parsed
     : null;
 }
@@ -170,10 +173,10 @@ export const updateMyProfile = async (req, res) => {
 };
 
 // GET /api/profile/discover
-// Guests and users without an active subscription receive photos only.
+// Guests and members without subscriptions receive photos only.
+// Active subscribers receive profile details without private contacts.
 export const discoverProfiles = async (req, res) => {
   try {
-    // Brokers use their separate broker-specific flow.
     if (req.user?.role === "broker") {
       return res.status(403).json({
         success: false,
@@ -182,16 +185,17 @@ export const discoverProfiles = async (req, res) => {
       });
     }
 
+    const memberId = req.user?._id || req.user?.id;
+
     let subscription = null;
     let plan = null;
 
-    if (req.user) {
+    if (memberId) {
       const now = new Date();
 
-      // Expire subscriptions that have passed their expiry date.
       await Subscription.updateMany(
         {
-          user: req.user._id,
+          user: memberId,
           status: "active",
           expiresAt: { $lte: now },
         },
@@ -201,7 +205,7 @@ export const discoverProfiles = async (req, res) => {
       );
 
       subscription = await Subscription.findOne({
-        user: req.user._id,
+        user: memberId,
         status: "active",
         startsAt: { $lte: now },
         expiresAt: { $gt: now },
@@ -212,11 +216,11 @@ export const discoverProfiles = async (req, res) => {
       }
     }
 
-    // No active plan: return ONLY profile photos.
+    // No active subscription: photos only.
     if (!subscription || !plan) {
       const photoProfiles = await Profile.find({
         profilePhoto: { $exists: true, $nin: ["", null] },
-        ...(req.user ? { user: { $ne: req.user._id } } : {}),
+        ...(memberId ? { user: { $ne: memberId } } : {}),
       })
         .select("profilePhoto user")
         .populate({
@@ -242,17 +246,16 @@ export const discoverProfiles = async (req, res) => {
       });
     }
 
-    const profileQuery = {
-      ...(req.user ? { user: { $ne: req.user._id } } : {}),
-    };
-
-    const profiles = await Profile.find(profileQuery)
+    // Load profile information without exposing email/mobile.
+    const profiles = await Profile.find({
+      ...(memberId ? { user: { $ne: memberId } } : {}),
+    })
       .select(
         "user dateOfBirth gender religion community maritalStatus height education occupation annualIncome aboutMe country state city profilePhoto createdAt"
       )
       .populate({
         path: "user",
-        select: "fullName email mobile role",
+        select: "fullName role",
         match: { role: "user" },
       })
       .sort({ createdAt: -1 })
@@ -262,7 +265,39 @@ export const discoverProfiles = async (req, res) => {
       (profile) => profile.user
     );
 
-    // Starter plan: show limited profile information.
+    const profileIds = registeredProfiles.map(
+      (profile) => profile._id
+    );
+
+    // Previously unlocked profiles remain visible to this member.
+    const [unlockedRecords, contactUnlocksUsed] = await Promise.all([
+      ContactUnlock.find({
+        member: memberId,
+        profile: { $in: profileIds },
+      })
+        .select("profile")
+        .lean(),
+
+      ContactUnlock.countDocuments({
+        member: memberId,
+        subscription: subscription._id,
+      }),
+    ]);
+
+    const unlockedProfileIds = new Set(
+      unlockedRecords.map((record) => String(record.profile))
+    );
+
+    const contactUnlockLimit = Number(
+      plan.contactUnlockLimit || 0
+    );
+
+    const contactUnlocksRemaining = Math.max(
+      0,
+      contactUnlockLimit - contactUnlocksUsed
+    );
+
+    // Starter: limited profile information.
     if (plan.features?.limitedProfileDetails === true) {
       const limitedProfiles = registeredProfiles.map((profile) => ({
         id: String(profile._id),
@@ -272,33 +307,50 @@ export const discoverProfiles = async (req, res) => {
         gender: profile.gender,
         city: profile.city,
         profilePhoto: profile.profilePhoto,
+
+        contactUnlocked: unlockedProfileIds.has(
+          String(profile._id)
+        ),
       }));
 
       return res.status(200).json({
         success: true,
         accessLevel: "limited",
         plan: subscription.plan,
+
+        contactUnlockLimit,
+        contactUnlocksUsed,
+        contactUnlocksRemaining,
+
         count: limitedProfiles.length,
         profiles: limitedProfiles,
       });
     }
 
-    // Silver and Gold: return expanded profile information.
+    // Silver and Gold: expanded profile details.
+    // Never include contact information in discovery.
     const fullProfiles = registeredProfiles.map((profile) => ({
       ...profile,
+
       user: {
+        id: String(profile.user._id),
         fullName: profile.user.fullName,
-        ...(plan.features?.contactDetails === true ? {
-          email: profile.user.email || "",
-          mobile: profile.user.mobile || "",
-        } : {}),
       },
+
+      contactUnlocked: unlockedProfileIds.has(
+        String(profile._id)
+      ),
     }));
 
     return res.status(200).json({
       success: true,
       accessLevel: "full",
       plan: subscription.plan,
+
+      contactUnlockLimit,
+      contactUnlocksUsed,
+      contactUnlocksRemaining,
+
       count: fullProfiles.length,
       profiles: fullProfiles,
     });
@@ -313,7 +365,7 @@ export const discoverProfiles = async (req, res) => {
 };
 
 // GET /api/profile/search
-// This endpoint requires login and subscription middleware.
+// Advanced search requires authentication and subscription middleware.
 export const searchProfiles = async (req, res) => {
   const page = parseInteger(req.query.page, 1, 1, 100000);
   const limit = parseInteger(req.query.limit, 12, 1, 50);
@@ -321,17 +373,21 @@ export const searchProfiles = async (req, res) => {
   const maxAge = parseInteger(req.query.maxAge, null, 18, 100);
 
   const hasMinAge =
-    req.query.minAge !== undefined && req.query.minAge !== "";
+    req.query.minAge !== undefined &&
+    req.query.minAge !== "";
 
   const hasMaxAge =
-    req.query.maxAge !== undefined && req.query.maxAge !== "";
+    req.query.maxAge !== undefined &&
+    req.query.maxAge !== "";
 
   if (
     page === null ||
     limit === null ||
     (hasMinAge && minAge === null) ||
     (hasMaxAge && maxAge === null) ||
-    (minAge !== null && maxAge !== null && minAge > maxAge)
+    (minAge !== null &&
+      maxAge !== null &&
+      minAge > maxAge)
   ) {
     return res.status(400).json({
       success: false,
@@ -339,9 +395,12 @@ export const searchProfiles = async (req, res) => {
     });
   }
 
-  const query = { user: { $ne: req.user.id } };
+  const memberId = req.user._id || req.user.id;
+  const query = { user: { $ne: memberId } };
 
-  const gender = String(req.query.gender || "").trim().toLowerCase();
+  const gender = String(req.query.gender || "")
+    .trim()
+    .toLowerCase();
 
   const genderValues = {
     female: "Female",
@@ -363,11 +422,16 @@ export const searchProfiles = async (req, res) => {
   }
 
   const occupation = String(req.query.occupation || "").trim();
-  const category = String(req.query.category || "").trim().toLowerCase();
+  const category = String(req.query.category || "")
+    .trim()
+    .toLowerCase();
 
   const occupationFilters = [];
 
-  if (occupation && occupation.toLowerCase() !== "any profession") {
+  if (
+    occupation &&
+    occupation.toLowerCase() !== "any profession"
+  ) {
     occupationFilters.push({
       $regex: escapeRegex(occupation),
       $options: "i",
@@ -413,17 +477,21 @@ export const searchProfiles = async (req, res) => {
 
     if (minAge !== null) {
       const youngestBirthDate = new Date(today);
+
       youngestBirthDate.setFullYear(
         today.getFullYear() - minAge
       );
+
       dateOfBirth.$lte = youngestBirthDate;
     }
 
     if (maxAge !== null) {
       const oldestBirthDate = new Date(today);
+
       oldestBirthDate.setFullYear(
         today.getFullYear() - maxAge - 1
       );
+
       dateOfBirth.$gt = oldestBirthDate;
     }
 
@@ -434,12 +502,13 @@ export const searchProfiles = async (req, res) => {
     const [profiles, total] = await Promise.all([
       Profile.find(query)
         .select(
-          "user dateOfBirth gender community maritalStatus height education occupation annualIncome aboutMe country state city profilePhoto createdAt"
+          "user dateOfBirth gender religion community maritalStatus height education occupation annualIncome aboutMe country state city profilePhoto createdAt"
         )
         .populate("user", "fullName")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
 
       Profile.countDocuments(query),
     ]);
@@ -448,17 +517,46 @@ export const searchProfiles = async (req, res) => {
       (profile) => profile.user
     );
 
+    const profileIds = registeredProfiles.map(
+      (profile) => profile._id
+    );
+
+    const unlockedRecords = await ContactUnlock.find({
+      member: memberId,
+      profile: { $in: profileIds },
+    })
+      .select("profile")
+      .lean();
+
+    const unlockedProfileIds = new Set(
+      unlockedRecords.map((record) => String(record.profile))
+    );
+
+    // Search results must never contain email or mobile.
+    const safeProfiles = registeredProfiles.map((profile) => ({
+      ...profile,
+      user: {
+        id: String(profile.user._id),
+        fullName: profile.user.fullName,
+      },
+      contactUnlocked: unlockedProfileIds.has(
+        String(profile._id)
+      ),
+    }));
+
     return res.status(200).json({
       success: true,
-      count: registeredProfiles.length,
+      count: safeProfiles.length,
       total,
+
       pagination: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
       },
-      profiles: registeredProfiles,
+
+      profiles: safeProfiles,
     });
   } catch (error) {
     console.error("Profile search error:", error);
@@ -471,7 +569,7 @@ export const searchProfiles = async (req, res) => {
 };
 
 // GET /api/profile/public
-// Public visitors can see photos only.
+// Public visitors can see profile photos only.
 export const getPublicProfiles = async (req, res) => {
   try {
     const profiles = await Profile.find({
@@ -551,4 +649,3 @@ export const uploadMyProfilePhoto = async (req, res) => {
     });
   }
 };
-

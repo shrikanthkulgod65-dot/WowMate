@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import {
@@ -37,18 +38,28 @@ import Register from "./pages/auth/Register";
 import "./admin/styles/admin.css";
 import "./index.css";
 
+// --------------------------------------------------
+// Coming Soon / Page Not Found
+// --------------------------------------------------
+
 function ComingSoon({ title }) {
   return (
     <main className="coming-soon">
       <span className="eyebrow">WOWMATE</span>
       <h1>{title}</h1>
       <p>This page is part of our upcoming development phase.</p>
+
       <Link to="/" className="primary-button">
         Back to Home
       </Link>
     </main>
   );
 }
+
+// --------------------------------------------------
+// Subscription Access Protection
+// Used for paid features such as Advanced Search
+// --------------------------------------------------
 
 function RequireSubscription({ children, requiredFeature }) {
   const location = useLocation();
@@ -63,7 +74,9 @@ function RequireSubscription({ children, requiredFeature }) {
         sessionStorage.getItem("token");
 
       if (!token) {
-        if (!cancelled) setAccess("blocked");
+        if (!cancelled) {
+          setAccess("blocked");
+        }
         return;
       }
 
@@ -78,20 +91,25 @@ function RequireSubscription({ children, requiredFeature }) {
 
         const data = await response.json().catch(() => ({}));
 
-        const featureAllowed = requiredFeature
-          ? data.features?.[requiredFeature] === true
-          : data.features?.browsePublicProfiles === true;
+        const featureAllowed =
+          requiredFeature &&
+          data.features?.[requiredFeature] === true;
 
         if (!cancelled) {
           setAccess(
-            response.ok && data.active === true && featureAllowed
+            response.ok &&
+              data.active === true &&
+              featureAllowed
               ? "allowed"
               : "blocked"
           );
         }
       } catch (error) {
         console.error("Subscription verification failed:", error);
-        if (!cancelled) setAccess("blocked");
+
+        if (!cancelled) {
+          setAccess("blocked");
+        }
       }
     }
 
@@ -103,7 +121,11 @@ function RequireSubscription({ children, requiredFeature }) {
   }, [requiredFeature]);
 
   if (access === "checking") {
-    return <main style={{ padding: 30, textAlign: "center" }}>Checking subscription access...</main>;
+    return (
+      <main style={{ padding: 30, textAlign: "center" }}>
+        Checking subscription access...
+      </main>
+    );
   }
 
   if (access !== "allowed") {
@@ -118,6 +140,10 @@ function RequireSubscription({ children, requiredFeature }) {
 
   return children;
 }
+
+// --------------------------------------------------
+// Main Website Routes
+// --------------------------------------------------
 
 function AppRoutes() {
   const { pathname } = useLocation();
@@ -136,6 +162,8 @@ function AppRoutes() {
 
         <Route path="/" element={<Home />} />
 
+        {/* Matrimony Categories */}
+
         <Route
           path="/farmer-matrimony"
           element={<FarmerMatrimony />}
@@ -146,57 +174,103 @@ function AppRoutes() {
           element={<ProfessionalMatrimony />}
         />
 
+        {/* Broker Services */}
+
         <Route path="/broker" element={<Brokerservices />} />
-        <Route path="/broker-matrimony" element={<Brokerservices />} />
-        <Route path="/broker-services" element={<Brokerservices />} />
+        <Route
+          path="/broker-matrimony"
+          element={<Brokerservices />}
+        />
+        <Route
+          path="/broker-services"
+          element={<Brokerservices />}
+        />
+
+        {/* Authentication */}
 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* Member Dashboard */}
+
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/my-profile" element={<MyProfile />} />
-        <Route path="/dashboard/my-profile" element={<MyProfile />} />
+        <Route
+          path="/dashboard/my-profile"
+          element={<MyProfile />}
+        />
 
-        <Route path="/search" element={<RequireSubscription requiredFeature="advancedFilters"><SearchResults /></RequireSubscription>} />
-        <Route path="/search-results" element={<RequireSubscription requiredFeature="advancedFilters"><SearchResults /></RequireSubscription>} />
+        {/* Advanced Search - Paid Subscription Required */}
+
+        <Route
+          path="/search"
+          element={
+            <RequireSubscription requiredFeature="advancedFilters">
+              <SearchResults />
+            </RequireSubscription>
+          }
+        />
+
+        <Route
+          path="/search-results"
+          element={
+            <RequireSubscription requiredFeature="advancedFilters">
+              <SearchResults />
+            </RequireSubscription>
+          }
+        />
+
+        {/* Discover Profiles - No Subscription Gate */}
 
         <Route
           path="/discover"
-          element={
-            <RequireSubscription>
-              <DiscoverProfiles />
-            </RequireSubscription>
-          }
+          element={<DiscoverProfiles />}
         />
 
         <Route
           path="/discover-profiles"
-          element={
-            <RequireSubscription>
-              <DiscoverProfiles />
-            </RequireSubscription>
-          }
+          element={<DiscoverProfiles />}
         />
 
+        {/* AI Match */}
+
         <Route path="/AIMatch" element={<AIMatch />} />
+
+        {/* Member Interests */}
 
         <Route
           path="/my-interests"
           element={<ComingSoon title="My Interests" />}
         />
 
+        {/* Information Pages */}
+
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
-          <Route path="/payment-result" element={<PaymentResult />} />
+        <Route path="/blog" element={<Blog />} />
+
+        {/* Payment */}
+
+        <Route
+          path="/payment-result"
+          element={<PaymentResult />}
+        />
+
         <Route
           path="/subscription-plans"
           element={<SubscriptionPlans />}
         />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/blog" element={<Blog />} />
 
-        {/* FOUNDER & CEO ADMIN PANEL */}
+        {/* Legal Pages */}
+
+        <Route
+          path="/privacy-policy"
+          element={<PrivacyPolicy />}
+        />
+
+        <Route path="/terms" element={<Terms />} />
+
+        {/* ADMIN PANEL */}
 
         <Route path="/admin/*" element={<AdminApp />} />
 
@@ -212,6 +286,10 @@ function AppRoutes() {
     </>
   );
 }
+
+// --------------------------------------------------
+// Main Application
+// --------------------------------------------------
 
 export default function App() {
   return (

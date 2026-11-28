@@ -7,9 +7,7 @@ import {
   Eye,
   MessageCircle,
   UserRound,
-  Search,
   Settings,
-  Bell,
   LogOut,
   Camera,
   ChevronRight,
@@ -19,10 +17,8 @@ import {
   BriefcaseBusiness,
   GraduationCap,
   CheckCircle2,
-  Clock,
-  Menu,
-  X,
 } from "lucide-react";
+
 import {
   sendInterest as sendInterestRequest,
   getSentInterests,
@@ -31,42 +27,6 @@ import {
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL || "http://wowmate.co.in/api"
 ).replace(/\/+$/, "");
-
-const demoMatches = [
-  {
-    id: "demo-priya",
-    isDemo: true,
-    name: "Priya Sharma",
-    age: 27,
-    location: "Bengaluru, Karnataka",
-    profession: "Software Engineer",
-    education: "B.Tech",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "demo-ananya",
-    isDemo: true,
-    name: "Ananya Rao",
-    age: 26,
-    location: "Mysuru, Karnataka",
-    profession: "Doctor",
-    education: "MBBS",
-    image:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "demo-sneha",
-    isDemo: true,
-    name: "Sneha Kulkarni",
-    age: 25,
-    location: "Belagavi, Karnataka",
-    profession: "Teacher",
-    education: "M.A., B.Ed.",
-    image:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80",
-  },
-];
 
 const initialActivity = [
   {
@@ -102,7 +62,8 @@ function getAuthToken() {
 function readStoredUser() {
   try {
     const storedUser =
-      localStorage.getItem("user") || sessionStorage.getItem("user");
+      localStorage.getItem("user") ||
+      sessionStorage.getItem("user");
 
     return storedUser ? JSON.parse(storedUser) : null;
   } catch {
@@ -114,15 +75,23 @@ function calculateAge(dateOfBirth) {
   if (!dateOfBirth) return null;
 
   const birthDate = new Date(dateOfBirth);
-  if (Number.isNaN(birthDate.getTime())) return null;
+
+  if (Number.isNaN(birthDate.getTime())) {
+    return null;
+  }
 
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  let age =
+    today.getFullYear() - birthDate.getFullYear();
+
+  const monthDifference =
+    today.getMonth() - birthDate.getMonth();
 
   if (
     monthDifference < 0 ||
-    (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    (monthDifference === 0 &&
+      today.getDate() < birthDate.getDate())
   ) {
     age -= 1;
   }
@@ -130,13 +99,16 @@ function calculateAge(dateOfBirth) {
   return age >= 18 && age <= 100 ? age : null;
 }
 
+// Normalize real profiles returned by the backend.
 function mapDiscoverProfile(profile) {
   const user = profile?.user;
 
   const userId =
     typeof user === "string"
       ? user
-      : user?._id || user?.id || profile?.userId;
+      : user?._id ||
+        user?.id ||
+        profile?.userId;
 
   const fullName =
     typeof user === "object" && user
@@ -155,7 +127,12 @@ function mapDiscoverProfile(profile) {
     ...profile,
 
     // Profile document ID is used for contact unlocking.
-   profileId: String(profile?._id || profile?.profileId || profile?.id || ""),
+    profileId: String(
+      profile?._id ||
+        profile?.profileId ||
+        profile?.id ||
+        ""
+    ),
 
     // User ID is used for sending interests.
     id: String(userId || profile?._id || ""),
@@ -168,9 +145,8 @@ function mapDiscoverProfile(profile) {
     profession: profile?.occupation || "Occupation not added",
     education: profile?.education || "Education not added",
 
-    image:
-      profile?.profilePhoto ||
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
+    // Do not display another person's stock photo as a member photo.
+    image: profile?.profilePhoto || "",
 
     contactUnlocked: profile?.contactUnlocked === true,
     contactDetails: null,
@@ -182,7 +158,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(readStoredUser);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState([]);
   const [matches, setMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(true);
@@ -198,6 +173,7 @@ export default function Dashboard() {
     useState(0);
   const [contactLoadingId, setContactLoadingId] = useState(null);
 
+  // Check subscription before opening Discover Profiles.
   const handleProtectedDiscover = async (event) => {
     event.preventDefault();
 
@@ -209,13 +185,16 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/me`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/subscriptions/me`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await response.json().catch(() => ({}));
 
@@ -225,12 +204,16 @@ export default function Dashboard() {
         navigate("/subscription-plans");
       }
     } catch (error) {
-      console.error("Subscription verification failed:", error);
+      console.error(
+        "Subscription verification failed:",
+        error
+      );
+
       navigate("/subscription-plans");
     }
   };
 
-  // Load real member profiles and contact credit information.
+  // Load only registered member profiles from the backend.
   useEffect(() => {
     const token = getAuthToken();
 
@@ -240,6 +223,7 @@ export default function Dashboard() {
       setMatchesError(
         "Please log in to view registered member profiles."
       );
+
       return undefined;
     }
 
@@ -318,7 +302,9 @@ export default function Dashboard() {
           );
         }
       } finally {
-        if (isMounted) setMatchesLoading(false);
+        if (isMounted) {
+          setMatchesLoading(false);
+        }
       }
     };
 
@@ -329,9 +315,11 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Load sent interests.
+  // Load interests already sent by the logged-in member.
   useEffect(() => {
-    if (!getAuthToken()) return undefined;
+    if (!getAuthToken()) {
+      return undefined;
+    }
 
     let isMounted = true;
 
@@ -358,7 +346,9 @@ export default function Dashboard() {
       })
       .catch((error) => {
         if (isMounted) {
-          setNotice(error.message || "Unable to load sent interests.");
+          setNotice(
+            error.message || "Unable to load sent interests."
+          );
         }
       });
 
@@ -387,6 +377,7 @@ export default function Dashboard() {
     "Member";
 
   const email = user?.email || "";
+
   const profileCompletion = user?.profileCompletion || 35;
 
   const handleLogout = () => {
@@ -408,19 +399,12 @@ export default function Dashboard() {
     );
   };
 
-  // Send normal interest.
+  // Send interest to a real registered member.
   const handleSendInterest = async (profile) => {
     const token = getAuthToken();
 
     if (!token) {
       setNotice("Please log in to express interest.");
-      return;
-    }
-
-    if (profile.isDemo) {
-      setNotice(
-        "This is a demo preview photo. Register another member account and complete its profile to test a real interest request."
-      );
       return;
     }
 
@@ -434,8 +418,9 @@ export default function Dashboard() {
       !/^[a-f\d]{24}$/i.test(String(receiverId))
     ) {
       setNotice(
-        "This profile is missing a valid registered member ID. Please refresh profiles or contact support."
+        "This profile is missing a valid registered member ID. Please refresh the profiles or contact support."
       );
+
       return;
     }
 
@@ -446,13 +431,17 @@ export default function Dashboard() {
       return;
     }
 
-    if (interestLoadingId === profile.id) return;
+    if (interestLoadingId === profile.id) {
+      return;
+    }
 
     try {
       setInterestLoadingId(profile.id);
       setNotice("");
 
-      const response = await sendInterestRequest(normalizedReceiverId);
+      const response = await sendInterestRequest(
+        normalizedReceiverId
+      );
 
       setSentInterests((previous) =>
         previous.includes(normalizedReceiverId)
@@ -460,27 +449,25 @@ export default function Dashboard() {
           : [...previous, normalizedReceiverId]
       );
 
-      setNotice(response.message || "Interest sent successfully.");
+      setNotice(
+        response.message || "Interest sent successfully."
+      );
     } catch (error) {
       setNotice(
-        error.message || "Unable to send interest. Please try again."
+        error.message ||
+          "Unable to send interest. Please try again."
       );
     } finally {
       setInterestLoadingId(null);
     }
   };
 
-  // Unlock a member's phone/email using the active subscription.
+  // Unlock a registered member's phone/email using the active subscription.
   const handleUnlockContact = async (profile) => {
     const token = getAuthToken();
 
     if (!token) {
       setNotice("Please log in to unlock contact details.");
-      return;
-    }
-
-    if (profile.isDemo) {
-      setNotice("Contact details are not available for demo profiles.");
       return;
     }
 
@@ -491,7 +478,9 @@ export default function Dashboard() {
       return;
     }
 
-    if (contactLoadingId === profile.id) return;
+    if (contactLoadingId === profile.id) {
+      return;
+    }
 
     if (
       !profile.contactUnlocked &&
@@ -500,6 +489,7 @@ export default function Dashboard() {
       setNotice(
         "You have used all your contact unlock credits. Please upgrade your subscription."
       );
+
       return;
     }
 
@@ -586,90 +576,6 @@ export default function Dashboard() {
 
         .as-dashboard * {
           box-sizing: border-box;
-        }
-
-        .as-dash-topbar {
-          position: sticky;
-          top: 0;
-          z-index: 20;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 15px 5%;
-          background: #fff;
-          border-bottom: 1px solid #f0e4e7;
-        }
-
-        .as-dash-brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #6d28d9;
-          text-decoration: none;
-          font-size: 23px;
-          font-weight: 800;
-        }
-
-        .as-dash-brand-icon {
-          display: grid;
-          place-items: center;
-          width: 39px;
-          height: 39px;
-          border-radius: 12px;
-          background: #8b5cf6;
-          color: white;
-        }
-
-        .as-dash-nav {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-        }
-
-        .as-dash-nav a {
-          color: #6d5960;
-          font-size: 13px;
-          font-weight: 600;
-          text-decoration: none;
-        }
-
-        .as-dash-nav a:hover {
-          color: #6d28d9;
-        }
-
-        .as-dash-header-actions {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .as-dash-icon-button {
-          position: relative;
-          display: grid;
-          place-items: center;
-          width: 40px;
-          height: 40px;
-          border: 1px solid #f0e2e5;
-          border-radius: 12px;
-          background: #fff;
-          color: #765c65;
-          cursor: pointer;
-        }
-
-        .as-dash-avatar {
-          display: grid;
-          place-items: center;
-          width: 39px;
-          height: 39px;
-          border-radius: 50%;
-          background: #ede5ff;
-          color: #6a2bcf;
-          font-weight: 800;
-        }
-
-        .as-dash-mobile-toggle {
-          display: none;
         }
 
         .as-dash-main {
@@ -874,9 +780,24 @@ export default function Dashboard() {
         }
 
         .as-dash-match-photo img {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        .as-dash-no-photo {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          background: #f3eefb;
+          color: #806c9c;
+          font-size: 12px;
+          font-weight: 600;
         }
 
         .as-dash-compatibility {
@@ -1138,10 +1059,6 @@ export default function Dashboard() {
         }
 
         @media (max-width: 1100px) {
-          .as-dash-nav {
-            gap: 14px;
-          }
-
           .as-dash-stats {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
@@ -1152,33 +1069,6 @@ export default function Dashboard() {
         }
 
         @media (max-width: 760px) {
-          .as-dash-topbar {
-            flex-wrap: wrap;
-          }
-
-          .as-dash-mobile-toggle {
-            display: grid;
-          }
-
-          .as-dash-nav {
-            display: none;
-            order: 3;
-            flex-basis: 100%;
-            align-items: stretch;
-            flex-direction: column;
-            gap: 0;
-            padding-top: 10px;
-          }
-
-          .as-dash-nav.open {
-            display: flex;
-          }
-
-          .as-dash-nav a {
-            padding: 12px 0;
-            border-top: 1px solid #f4e8eb;
-          }
-
           .as-dash-welcome {
             align-items: flex-start;
             flex-direction: column;
@@ -1187,10 +1077,6 @@ export default function Dashboard() {
 
           .as-dash-match-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .as-dash-match-card:last-child {
-            display: none;
           }
         }
 
@@ -1219,10 +1105,6 @@ export default function Dashboard() {
 
           .as-dash-match-grid {
             grid-template-columns: 1fr;
-          }
-
-          .as-dash-match-card:last-child {
-            display: block;
           }
 
           .as-dash-match-photo {
@@ -1286,10 +1168,12 @@ export default function Dashboard() {
               <div className="as-dash-stat-icon">
                 <Users size={21} />
               </div>
+
               <div>
                 <div className="as-dash-stat-value">
                   {matches.length}
                 </div>
+
                 <div className="as-dash-stat-label">
                   Suggested matches
                 </div>
@@ -1300,10 +1184,12 @@ export default function Dashboard() {
               <div className="as-dash-stat-icon">
                 <Heart size={21} />
               </div>
+
               <div>
                 <div className="as-dash-stat-value">
                   {savedProfiles.length}
                 </div>
+
                 <div className="as-dash-stat-label">
                   Saved profiles
                 </div>
@@ -1314,10 +1200,12 @@ export default function Dashboard() {
               <div className="as-dash-stat-icon">
                 <MessageCircle size={21} />
               </div>
+
               <div>
                 <div className="as-dash-stat-value">
                   {sentInterests.length}
                 </div>
+
                 <div className="as-dash-stat-label">
                   Interests sent
                 </div>
@@ -1328,8 +1216,10 @@ export default function Dashboard() {
               <div className="as-dash-stat-icon">
                 <Eye size={21} />
               </div>
+
               <div>
-                <div className="as-dash-stat-value">12</div>
+                <div className="as-dash-stat-value">—</div>
+
                 <div className="as-dash-stat-label">
                   Profile views
                 </div>
@@ -1341,8 +1231,9 @@ export default function Dashboard() {
         <div className="as-dash-section-heading">
           <div>
             <h2>Find your compatible match</h2>
+
             <p>
-              Explore registered members and a few demo photos for layout testing.
+              Explore profiles of registered members from our database.
             </p>
           </div>
 
@@ -1387,8 +1278,17 @@ export default function Dashboard() {
               </p>
             )}
 
+            {!matchesLoading &&
+              !matchesError &&
+              matches.length === 0 && (
+                <p className="as-dash-match-detail">
+                  No registered profiles are available yet. New members
+                  will appear here after completing their profiles.
+                </p>
+              )}
+
             <div className="as-dash-match-grid">
-              {[...matches, ...demoMatches].map((profile) => {
+              {matches.map((profile) => {
                 const isSaved = savedProfiles.includes(profile.id);
 
                 const receiverId =
@@ -1397,7 +1297,6 @@ export default function Dashboard() {
                     : profile.user?._id || profile.userId;
 
                 const interestSent =
-                  !profile.isDemo &&
                   Boolean(receiverId) &&
                   sentInterests.includes(String(receiverId));
 
@@ -1413,17 +1312,26 @@ export default function Dashboard() {
                     key={profile.id}
                   >
                     <div className="as-dash-match-photo">
-                      <img
-                        src={profile.image}
-                        alt={profile.name}
-                        loading="lazy"
-                      />
+                      {profile.image ? (
+                        <img
+                          src={profile.image}
+                          alt={profile.name}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div
+                          className="as-dash-no-photo"
+                          role="img"
+                          aria-label="No profile photo"
+                        >
+                          <UserRound size={42} />
+                          <span>No photo uploaded</span>
+                        </div>
+                      )}
 
                       <span className="as-dash-compatibility">
                         <CheckCircle2 size={12} />
-                        {profile.isDemo
-                          ? "Demo preview"
-                          : "Registered member"}
+                        Registered member
                       </span>
 
                       <button
@@ -1470,72 +1378,58 @@ export default function Dashboard() {
                           interestSent ? "sent" : ""
                         }`}
                         onClick={() => handleSendInterest(profile)}
-                        disabled={
-                          profile.isDemo ||
-                          interestSent ||
-                          interestLoading
-                        }
+                        disabled={interestSent || interestLoading}
                         aria-busy={interestLoading}
-                        title={
-                          profile.isDemo
-                            ? "Demo preview only; use a registered member to send interest"
-                            : "Send interest"
-                        }
+                        title="Send interest"
                       >
-                        {profile.isDemo
-                          ? "Demo Preview"
-                          : interestLoading
-                            ? "Sending..."
-                            : interestSent
-                              ? "Interest Sent"
-                              : "Show Interest"}
+                        {interestLoading
+                          ? "Sending..."
+                          : interestSent
+                            ? "Interest Sent"
+                            : "Show Interest"}
                       </button>
 
-                      {!profile.isDemo && (
-                        <>
-                          <button
-                            type="button"
-                            className="as-dash-contact-button"
-                            onClick={() =>
-                              handleUnlockContact(profile)
-                            }
-                            disabled={
-                              contactLoading ||
-                              (
-                                !profile.contactUnlocked &&
-                                contactUnlocksRemaining <= 0
-                              )
-                            }
-                          >
-                            {contactLoading
-                              ? "Unlocking..."
-                              : profile.contactUnlocked
-                                ? "View Contact"
-                                : contactUnlocksRemaining > 0
-                                  ? "Unlock Contact"
-                                  : "No Unlocks Remaining"}
-                          </button>
+                      <button
+                        type="button"
+                        className="as-dash-contact-button"
+                        onClick={() =>
+                          handleUnlockContact(profile)
+                        }
+                        disabled={
+                          contactLoading ||
+                          (
+                            !profile.contactUnlocked &&
+                            contactUnlocksRemaining <= 0
+                          )
+                        }
+                      >
+                        {contactLoading
+                          ? "Unlocking..."
+                          : profile.contactUnlocked
+                            ? "View Contact"
+                            : contactUnlocksRemaining > 0
+                              ? "Unlock Contact"
+                              : "No Unlocks Remaining"}
+                      </button>
 
-                          {profile.contactUnlocked &&
-                            profile.contactDetails && (
-                              <div className="as-dash-contact-box">
-                                <strong>Contact Information</strong>
+                      {profile.contactUnlocked &&
+                        profile.contactDetails && (
+                          <div className="as-dash-contact-box">
+                            <strong>Contact Information</strong>
 
-                                <p>
-                                  Email:{" "}
-                                  {profile.contactDetails.email ||
-                                    "Not available"}
-                                </p>
+                            <p>
+                              Email:{" "}
+                              {profile.contactDetails.email ||
+                                "Not available"}
+                            </p>
 
-                                <p>
-                                  Mobile:{" "}
-                                  {profile.contactDetails.mobile ||
-                                    "Not available"}
-                                </p>
-                              </div>
-                            )}
-                        </>
-                      )}
+                            <p>
+                              Mobile:{" "}
+                              {profile.contactDetails.mobile ||
+                                "Not available"}
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </article>
                 );
@@ -1571,7 +1465,10 @@ export default function Dashboard() {
                   style={{
                     width: `${Math.min(
                       100,
-                      Math.max(0, Number(profileCompletion) || 0)
+                      Math.max(
+                        0,
+                        Number(profileCompletion) || 0
+                      )
                     )}%`,
                   }}
                 />

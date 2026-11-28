@@ -1,134 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const initialBrokers = [
-  {
-    id: 1,
-    name: "Rajesh Patil",
-    city: "Belagavi",
-    experience: "8 years",
-    bureau: "Patil Marriage Bureau",
-    phone: "9876543210",
-    photo:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500",
-    about:
-      "Helping families find suitable matrimonial matches with care and trust.",
-  },
-  {
-    id: 2,
-    name: "Suresh Kulkarni",
-    city: "Dharwad",
-    experience: "5 years",
-    bureau: "Kulkarni Matrimony Services",
-    phone: "9876543211",
-    photo:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500",
-    about:
-      "Connecting brides and grooms from different communities and families.",
-  },
-  {
-    id: 3,
-    name: "Priya Desai",
-    city: "Hubballi",
-    experience: "6 years",
-    bureau: "Priya Matchmaking",
-    phone: "9876543212",
-    photo:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500",
-    about:
-      "Dedicated to helping families discover compatible life partners.",
-  },
-];
-
-const initialBiodata = [
-  {
-    id: 101,
-    brokerId: 1,
-    name: "Ananya Patil",
-    gender: "Bride",
-    age: 25,
-    city: "Belagavi",
-    education: "B.E. Computer Science",
-    occupation: "Software Engineer",
-    height: "5 ft 4 in",
-    religion: "Hindu",
-    photo:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500",
-    about: "Educated, family-oriented, and career-focused.",
-  },
-  {
-    id: 102,
-    brokerId: 1,
-    name: "Rahul Patil",
-    gender: "Groom",
-    age: 28,
-    city: "Belagavi",
-    education: "MBA",
-    occupation: "Business Owner",
-    height: "5 ft 9 in",
-    religion: "Hindu",
-    photo:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500",
-    about: "Responsible and family-oriented, with an interest in business.",
-  },
-  {
-    id: 103,
-    brokerId: 2,
-    name: "Sneha Kulkarni",
-    gender: "Bride",
-    age: 24,
-    city: "Dharwad",
-    education: "M.Sc.",
-    occupation: "Teacher",
-    height: "5 ft 3 in",
-    religion: "Hindu",
-    photo:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500",
-    about: "Kind-hearted, well-educated, and values family relationships.",
-  },
-  {
-    id: 104,
-    brokerId: 2,
-    name: "Amit Kulkarni",
-    gender: "Groom",
-    age: 29,
-    city: "Dharwad",
-    education: "B.E. Mechanical",
-    occupation: "Engineer",
-    height: "5 ft 10 in",
-    religion: "Hindu",
-    photo:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500",
-    about: "Well-settled professional looking for a compatible life partner.",
-  },
-  {
-    id: 105,
-    brokerId: 3,
-    name: "Kavya Desai",
-    gender: "Bride",
-    age: 26,
-    city: "Hubballi",
-    education: "MBA",
-    occupation: "HR Manager",
-    height: "5 ft 5 in",
-    religion: "Hindu",
-    photo:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500",
-    about: "Independent, friendly, and enjoys spending time with family.",
-  },
-];
-
-const emptyBrokerForm = {
-  name: "",
-  phone: "",
-  city: "",
-  experience: "",
-  bureau: "",
-  email: "",
-  password: "",
-  about: "",
-};
-
 const emptyBiodataForm = {
   name: "",
   gender: "Bride",
@@ -257,6 +129,34 @@ function hasActiveMatrimonySubscription() {
   return false;
 }
 
+function loadSavedBrokerBiodata() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const saved = window.localStorage.getItem("wowmateBrokerBiodata");
+    if (!saved) return [];
+
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+
+    const seededIds = new Set(["101", "102", "103", "104", "105"]);
+    const cleaned = parsed.filter(
+      (item) => !seededIds.has(String(item?.id))
+    );
+
+    if (cleaned.length !== parsed.length) {
+      window.localStorage.setItem(
+        "wowmateBrokerBiodata",
+        JSON.stringify(cleaned)
+      );
+    }
+
+    return cleaned;
+  } catch (error) {
+    console.error("Could not load saved broker biodata:", error);
+    return [];
+  }
+}
 export default function BrokerMatrimony() {
   const navigate = useNavigate();
   // Broker management is available only to accounts whose backend role is "broker".
@@ -283,38 +183,17 @@ export default function BrokerMatrimony() {
   navigate("/subscription-plans");
 }
   const [activeTab, setActiveTab] = useState(isBroker ? "dashboard" : "find");
-  const [brokers, setBrokers] = useState(() => {
-    try {
-      const saved = window.localStorage.getItem("wowmarriageBrokerProfiles");
-      const savedBrokers = saved ? JSON.parse(saved) : [];
-      return Array.isArray(savedBrokers) ? [...initialBrokers, ...savedBrokers] : initialBrokers;
-    } catch (error) {
-      console.error("Could not load saved broker profiles:", error);
-      return initialBrokers;
-    }
-  });
-  const [brokerDirectoryLoading, setBrokerDirectoryLoading] = useState(true);
-  const [biodata, setBiodata] = useState(() => {
-    try {
-      const saved = window.localStorage.getItem("wowmateBrokerBiodata");
-      return saved ? JSON.parse(saved) : initialBiodata;
-    } catch (error) {
-      console.error("Could not load saved biodata:", error);
-      return initialBiodata;
-    }
-  });
+  const [brokers, setBrokers] = useState([]);
+    const [brokerDirectoryLoading, setBrokerDirectoryLoading] = useState(true);
+  const [biodata, setBiodata] = useState(loadSavedBrokerBiodata);
 
-  const [selectedBroker, setSelectedBroker] = useState(null);
+    const [selectedBroker, setSelectedBroker] = useState(null);
   const [selectedBiodata, setSelectedBiodata] = useState(null);
 
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("All");
   const [experienceFilter, setExperienceFilter] = useState("All");
   const [sortOrder, setSortOrder] = useState("name");
-  const [genderFilter, setGenderFilter] = useState("All");
-
-  const [brokerForm, setBrokerForm] = useState(emptyBrokerForm);
-  const [brokerPhoto, setBrokerPhoto] = useState("");
   const [biodataForm, setBiodataForm] = useState(emptyBiodataForm);
   const [biodataPhoto, setBiodataPhoto] = useState("");
   const [editingBiodataId, setEditingBiodataId] = useState(null);
@@ -332,22 +211,6 @@ export default function BrokerMatrimony() {
   });
   const [showBiodataForm, setShowBiodataForm] = useState(false);
   const [notice, setNotice] = useState("");
-  const [brokerAuthMode, setBrokerAuthMode] = useState("register");
-  const [brokerLoginForm, setBrokerLoginForm] = useState({
-    email: "",
-    password: "",
-    rememberMe: true,
-  });
-  const [brokerAuthError, setBrokerAuthError] = useState("");
-
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    phone: "",
-    city: "",
-    service: "Find a suitable match",
-    message: "",
-  });
-
   useEffect(() => {
     let cancelled = false;
 
@@ -574,41 +437,6 @@ export default function BrokerMatrimony() {
 
   const brokerCities = [...new Set(brokers.map((broker) => broker.city).filter(Boolean))].sort();
 
-  const visibleBiodata = biodata.filter((person) => {
-    const matchesBroker =
-      selectedBroker &&
-      String(person.brokerId) === String(selectedBroker.id);
-
-    const matchesGender =
-      genderFilter === "All" || person.gender === genderFilter;
-
-    return matchesBroker && matchesGender;
-  });
-
-  function handleBrokerPhoto(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setNotice("Please select a valid image file.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setNotice("Please select an image smaller than 5 MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBrokerPhoto(typeof reader.result === "string" ? reader.result : "");
-      setNotice("");
-    };
-    reader.onerror = () => setNotice("The photo could not be read. Please choose another image.");
-    reader.readAsDataURL(file);
-  }
-
   function handleBiodataPhoto(event) {
     const file = event.target.files?.[0];
 
@@ -628,188 +456,6 @@ export default function BrokerMatrimony() {
     setNotice("");
   }
 
-  async function handleBrokerLogin(event) {
-    event.preventDefault();
-    setBrokerAuthError("");
-
-    const email = brokerLoginForm.email.trim().toLowerCase();
-    if (!email || !brokerLoginForm.password) {
-      setBrokerAuthError("Please enter your email address and password.");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: brokerLoginForm.password }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data.token || !data.user) {
-        throw new Error(data.message || data.error || "Login failed. Please try again.");
-      }
-      if (String(data.user.role).toLowerCase() !== "broker") {
-        throw new Error("This account is not registered as a broker.");
-      }
-
-      window.localStorage.removeItem("token");
-      window.localStorage.removeItem("user");
-      window.sessionStorage.removeItem("token");
-      window.sessionStorage.removeItem("user");
-      const storage = brokerLoginForm.rememberMe
-        ? window.localStorage
-        : window.sessionStorage;
-      storage.setItem("token", data.token);
-      storage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("authChanged"));
-
-      const savedProfiles = JSON.parse(
-        window.localStorage.getItem("wowmarriageBrokerProfiles") || "[]"
-      );
-      const savedProfile = Array.isArray(savedProfiles)
-        ? savedProfiles.find(
-            (profile) =>
-              profile.userId === data.user.id ||
-              profile.id === data.user.id ||
-              profile.email?.toLowerCase() === email
-          )
-        : null;
-      const broker = {
-        id: data.user.id || data.user._id,
-        userId: data.user.id || data.user._id,
-        name: data.user.fullName || savedProfile?.name || "Broker",
-        email: data.user.email || email,
-        phone: "",
-        city: "",
-        experience: "0 years",
-        bureau: "",
-        photo: "",
-        about: "",
-        ...savedProfile,
-      };
-
-      setRegisteredBroker(broker);
-      setSelectedBroker(broker);
-      setBrokerLoginForm({ email: "", password: "", rememberMe: true });
-      setActiveTab("dashboard");
-      setNotice("Welcome back. Your broker account is signed in.");
-      requestAnimationFrame(() => {
-        document.getElementById("broker-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    } catch (error) {
-      console.error("Broker login failed:", error);
-      setBrokerAuthError(
-        error instanceof Error
-          ? error.message
-          : "Could not connect to the backend. Make sure the server is running on port 5000."
-      );
-    }
-  }
-
-  async function handleBrokerRegistration(event) {
-    event.preventDefault();
-    setNotice("");
-    setBrokerAuthError("");
-
-    const name = brokerForm.name.trim();
-    const phone = brokerForm.phone.trim();
-    const city = brokerForm.city.trim();
-    const email = brokerForm.email.trim().toLowerCase();
-    const experience = Number(brokerForm.experience);
-    const password = brokerForm.password;
-
-    if (!brokerPhoto) {
-      setBrokerAuthError("Please upload your profile photo.");
-      return;
-    }
-    if (!name || !city || !email || !password) {
-      setBrokerAuthError("Please complete all required fields.");
-      return;
-    }
-    const phoneDigits = phone.replace(/\D/g, "");
-    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
-      setBrokerAuthError("Please enter a valid mobile number.");
-      return;
-    }
-    if (!Number.isFinite(experience) || experience < 0 || experience > 80) {
-      setBrokerAuthError("Please enter experience between 0 and 80 years.");
-      return;
-    }
-    if (password.length < 8 || password.length > 72) {
-      setBrokerAuthError("Please enter a password between 8 and 72 characters.");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/auth/register-broker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: name, email, password }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      // Registration must succeed on the server before we switch to the login form.
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Broker registration failed. Please try again.");
-      }
-      if (data.user?.role && String(data.user.role).toLowerCase() !== "broker") {
-        throw new Error("The server did not create a broker account. Please check registerBroker in authController.js.");
-      }
-      if (data.success === false) {
-        throw new Error(data.message || "Broker registration failed. Please try again.");
-      }
-
-      // Store non-sensitive profile details only. Do not sign the user in automatically.
-      // Profile extras remain browser-only until a broker-profile API is implemented.
-      const newBroker = {
-        id: data.user?.id || data.user?._id || `broker-${Date.now()}`,
-        userId: data.user?.id || data.user?._id || null,
-        name: data.user?.fullName || name,
-        phone,
-        city,
-        experience: `${experience} years`,
-        bureau: brokerForm.bureau.trim(),
-        email: data.user?.email || email,
-        photo: brokerPhoto,
-        about: brokerForm.about.trim() || "Matrimony broker helping families find suitable matches.",
-        profileCount: 0,
-      };
-
-      const savedRaw = window.localStorage.getItem("wowmarriageBrokerProfiles");
-      const savedProfiles = savedRaw ? JSON.parse(savedRaw) : [];
-      const profiles = Array.isArray(savedProfiles) ? savedProfiles : [];
-      const withoutDuplicate = profiles.filter((profile) => profile.email?.toLowerCase() !== email);
-      withoutDuplicate.push(newBroker);
-      window.localStorage.setItem("wowmarriageBrokerProfiles", JSON.stringify(withoutDuplicate));
-      setBrokers((previous) => [
-        ...previous.filter((broker) => broker.email?.toLowerCase() !== email),
-        newBroker,
-      ]);
-
-      // Hide registration and show login, pre-filling only the email address.
-      setBrokerForm(emptyBrokerForm);
-      setBrokerPhoto("");
-      setBrokerLoginForm({ email, password: "", rememberMe: true });
-      setBrokerAuthMode("login");
-      setBrokerAuthError("");
-      setNotice("Registration successful! Please log in with the email and password you just registered.");
-      setActiveTab("become");
-      requestAnimationFrame(() => {
-        document.getElementById("broker-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    } catch (error) {
-      console.error("Broker registration failed:", error);
-      setBrokerAuthError(
-        error instanceof TypeError
-          ? "Could not reach the backend. Check that the server is running on port 5000, the API route is /api/auth/register-broker, and CORS allows your frontend origin."
-          : error instanceof Error
-            ? error.message
-            : "Broker registration failed. Please try again."
-      );
-    }
-  }
-
   function handleBrokerLogout() {
     window.localStorage.removeItem("token");
     window.localStorage.removeItem("user");
@@ -819,8 +465,6 @@ export default function BrokerMatrimony() {
     setRegisteredBroker(null);
     setSelectedBroker(null);
     setSelectedBiodata(null);
-    setBrokerAuthMode("login");
-    setBrokerAuthError("");
     setNotice("You have been signed out of your broker account.");
     setActiveTab("find");
   }
@@ -947,26 +591,9 @@ export default function BrokerMatrimony() {
     setNotice(`${profile.name}'s biodata was deleted.`);
   }
 
-  function handleContactSubmit(event) {
-    event.preventDefault();
-
-    setNotice(
-      "Thank you! This is a frontend demo. Connect the backend to save your enquiry."
-    );
-
-    setContactForm({
-      name: "",
-      phone: "",
-      city: "",
-      service: "Find a suitable match",
-      message: "",
-    });
-  }
-
   function openBroker(broker) {
     setSelectedBroker(broker);
     setSelectedBiodata(null);
-    setGenderFilter("All");
     setActiveTab("find");
     setNotice("");
 
@@ -1143,12 +770,11 @@ export default function BrokerMatrimony() {
 
         .broker-stats {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: 1fr;
           gap: 15px;
           margin-top: 30px;
-          max-width: 560px;
+          max-width: 280px;
         }
-
         .broker-stat {
           background: white;
           border: 1px solid #e8ddff;
@@ -1660,7 +1286,7 @@ export default function BrokerMatrimony() {
         .broker-dashboard-empty h2, .broker-dashboard-heading h2 { color: #4c1d95; margin: 10px 0; }
         .broker-dashboard-empty p, .broker-dashboard-heading p { color: #746b75; line-height: 1.7; }
         .broker-dashboard-empty > p { max-width: 600px; margin: 0 auto 22px; }
-        .broker-dashboard-demo-note { color: #75658f; background: #f4efff; border: 1px solid #e4d7ff;
+        .broker-dashboard-info-note { color: #75658f; background: #f4efff; border: 1px solid #e4d7ff;
           border-radius: 12px; padding: 12px 15px; font-size: 12px; line-height: 1.6; margin-top: 20px; }
         .broker-dashboard-heading { display: flex; align-items: center; justify-content: space-between;
           gap: 20px; padding: 25px 28px; margin-bottom: 18px; }
@@ -1673,7 +1299,13 @@ export default function BrokerMatrimony() {
         .broker-dashboard-profile-copy { flex: 1; min-width: 180px; }
         .broker-dashboard-profile-copy h3 { margin: 0 0 8px; color: #4c1d95; font-size: 20px; }
         .broker-dashboard-profile-copy p { margin: 5px 0; color: #746b75; font-size: 13px; }
-        .broker-dashboard-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+        .broker-dashboard-stats {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          max-width: 350px;
+          gap: 16px;
+          margin-bottom: 18px;
+        }
         .broker-dashboard-stat { padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
         .broker-dashboard-stat-icon { font-size: 24px; }
         .broker-dashboard-stat-label { color: #746b75; font-size: 13px; }
@@ -1840,7 +1472,6 @@ export default function BrokerMatrimony() {
                   type="button"
                   className="broker-btn broker-btn-outline"
                   onClick={() => {
-                    setBrokerAuthMode("register");
                     selectTab("become");
                   }}
                 >
@@ -1850,25 +1481,16 @@ export default function BrokerMatrimony() {
             )}
 
             <div className="broker-stats">
-              <div className="broker-stat">
-                <strong>{brokers.length}+</strong>
-                <span>Brokers Available</span>
-              </div>
-
-              <div className="broker-stat">
-                <strong>{biodata.length}+</strong>
-                <span>Biodata Profiles</span>
-              </div>
-
-              <div className="broker-stat">
-                <strong>100%</strong>
-                <span>Matchmaking Focus</span>
-              </div>
+            <div className="broker-stat">
+              <strong>{brokerDirectoryLoading ? "…" : brokers.length}</strong>
+              <span>Registered broker profiles</span>
             </div>
           </div>
+        </div>
 
           <img
-            className="broker-hero-image"
+
+className="broker-hero-image"
             src="brokers.png"
             alt="Indian wedding celebration"
           />
@@ -1908,8 +1530,7 @@ export default function BrokerMatrimony() {
                 <div className="broker-eyebrow">Find Your Matchmaker</div>
                 <h2>Find a Trusted Matrimony Broker</h2>
                 <p>
-                  Explore broker profiles, learn about their services,
-                  and browse the bride and groom biodata they manage.
+                  Explore registered broker profiles and learn about their services.
                 </p>
               </div>
 
@@ -1982,11 +1603,6 @@ export default function BrokerMatrimony() {
 
               <div className="broker-grid">
                 {filteredBrokers.map((broker) => {
-                  const count = biodata.filter(
-                    (person) =>
-                      String(person.brokerId) === String(broker.id)
-                  ).length;
-
                   return (
                     <article className="broker-card" key={broker.id}>
                       <img
@@ -2007,7 +1623,7 @@ export default function BrokerMatrimony() {
                             <p className="broker-muted">📍 {broker.city}</p>
                             <p className="broker-muted">💼 Experience: {broker.experience}</p>
                             <p className="broker-muted">🏢 {broker.bureau || "Independent Broker"}</p>
-                            <p className="broker-muted">👥 {count} biodata profiles</p>
+
                             {broker.phone && (
                               <p className="broker-muted">📞 {broker.phone}</p>
                             )}
@@ -2103,98 +1719,26 @@ export default function BrokerMatrimony() {
                   </div>
                 </div>
 
-                {hasSubscription ? <>
-                <div className="broker-section-heading">
-                  <h2>
-                    Biodata Managed by {selectedBroker.name}
-                  </h2>
-
-                  <p>
-                    Select a profile to view its available details.
-                    These are demonstration profiles.
-                  </p>
-                </div>
-
-                <div className="broker-toolbar">
-                  <div className="broker-search">
-                    <label
-                      htmlFor="broker-gender-filter"
-                      style={{
-                        display: "block",
-                        marginBottom: 8,
-                        fontWeight: 700,
-                        fontSize: 13,
-                      }}
-                    >
-                      Filter profiles
-                    </label>
-
-                    <select
-                      id="broker-gender-filter"
-                      className="broker-input"
-                      value={genderFilter}
-                      onChange={(event) =>
-                        setGenderFilter(event.target.value)
-                      }
-                    >
-                      <option value="All">All Profiles</option>
-                      <option value="Bride">Brides</option>
-                      <option value="Groom">Grooms</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="broker-grid">
-                  {visibleBiodata.map((person) => (
-                    <article className="broker-card" key={person.id}>
-                      <img
-                        className="broker-card-image"
-                        src={person.photo}
-                        alt={person.name}
-                      />
-
-                      <div className="broker-card-content">
-                        <span className="broker-tag">
-                          {person.gender}
-                        </span>
-
-                        <h3>{person.name}</h3>
-
-                        <p className="broker-muted">
-                          🎂 {person.age} years
-                        </p>
-
-                        <p className="broker-muted">
-                          📍 {person.city}
-                        </p>
-
-                        <p className="broker-muted">
-                          🎓 {person.education}
-                        </p>
-
-                        <button
-                          className="broker-btn broker-btn-primary"
-                          style={{ width: "100%", marginTop: 10 }}
-                          onClick={() => setSelectedBiodata(person)}
-                        >
-                          View Biodata Details
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-
-                  {visibleBiodata.length === 0 && (
-                    <div className="broker-empty">
-                      <h3>No biodata available</h3>
+                {hasSubscription ? (
+                  <>
+                    <div className="broker-section-heading">
+                      <h2>Public Biodata Listings</h2>
                       <p>
-                        There are no profiles in this category for this
-                        broker yet.
+                        No public biodata listings are currently available.
+                        Biodata drafts saved in a broker's browser are private
+                        and are not published to other members.
                       </p>
                     </div>
-                  )}
-                </div>
-                </> : (
-                  <div className="broker-service-card">
+
+                    <div className="broker-empty">
+                      <h3>No publicly published biodata</h3>
+                      <p>
+                        Public biodata will appear here only after secure
+                        server-side publishing is available.
+                      </p>
+                    </div>
+                  </>
+                ) : (                  <div className="broker-service-card">
                     <h3>🔒 Bride and Groom Biodata Is for Subscribers</h3>
                     <p className="broker-muted">Subscribe to the existing matrimony plan to view this broker's managed biodata and profile details.</p>
                     <button type="button" className="broker-btn broker-btn-primary" onClick={handleUnlockBrokerDetails}>{isLoggedIn ? "Subscribe to View Details →" : "Login to Continue →"}</button>
@@ -2203,88 +1747,7 @@ export default function BrokerMatrimony() {
               </>
             )}
 
-          {/* BIODATA DETAILS */}
-          {!isBroker && activeTab === "find" && selectedBiodata && hasSubscription && (
-            <>
-              <button
-                className="broker-btn broker-btn-outline broker-back"
-                onClick={() => setSelectedBiodata(null)}
-              >
-                ← Back to Biodata
-              </button>
-
-              <div className="broker-detail">
-                <img
-                  src={selectedBiodata.photo}
-                  alt={selectedBiodata.name}
-                />
-
-                <div>
-                  <span className="broker-tag">
-                    {selectedBiodata.gender} Profile
-                  </span>
-
-                  <h2>{selectedBiodata.name}</h2>
-
-                  <p className="broker-muted">
-                    {selectedBiodata.about}
-                  </p>
-
-                  <div className="broker-detail-list">
-                    <div className="broker-detail-item">
-                      <span>Age</span>
-                      <strong>{selectedBiodata.age} years</strong>
-                    </div>
-
-                    <div className="broker-detail-item">
-                      <span>City</span>
-                      <strong>{selectedBiodata.city}</strong>
-                    </div>
-
-                    <div className="broker-detail-item">
-                      <span>Education</span>
-                      <strong>{selectedBiodata.education}</strong>
-                    </div>
-
-                    <div className="broker-detail-item">
-                      <span>Occupation</span>
-                      <strong>{selectedBiodata.occupation}</strong>
-                    </div>
-
-                    <div className="broker-detail-item">
-                      <span>Height</span>
-                      <strong>{selectedBiodata.height}</strong>
-                    </div>
-
-                    <div className="broker-detail-item">
-                      <span>Religion</span>
-                      <strong>{selectedBiodata.religion}</strong>
-                    </div>
-                  </div>
-
-                  <div className="broker-service-card">
-                    <h3>Managed by</h3>
-
-                    <p className="broker-muted">
-                      {brokers.find(
-                        (broker) =>
-                          String(broker.id) ===
-                          String(selectedBiodata.brokerId)
-                      )?.name || "Wowmate Broker"}
-                    </p>
-
-                    <p className="broker-muted">
-                      Contact details and private biodata should only
-                      be shared through an authorized, consent-based
-                      process.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* BROKER DASHBOARD — FRONTEND DEMO */}
+          {/* BROKER DASHBOARD */}
           {activeTab === "dashboard" && (
             <section className="broker-dashboard">
               {!isBroker || !registeredBroker ? (
@@ -2299,7 +1762,6 @@ export default function BrokerMatrimony() {
                     type="button"
                     className="broker-btn broker-btn-primary"
                     onClick={() => {
-                      setBrokerAuthMode("register");
                       selectTab("become");
                     }}
                   >
@@ -2309,7 +1771,6 @@ export default function BrokerMatrimony() {
                     type="button"
                     className="broker-btn broker-btn-outline"
                     onClick={() => {
-                      setBrokerAuthMode("login");
                       selectTab("become");
                     }}
                   >
@@ -2360,30 +1821,17 @@ export default function BrokerMatrimony() {
                   <div className="broker-dashboard-stats">
                     <article className="broker-dashboard-stat">
                       <span className="broker-dashboard-stat-icon">📄</span>
-                      <span className="broker-dashboard-stat-label">My biodata</span>
+                      <span className="broker-dashboard-stat-label">Private biodata drafts</span>
                       <strong>{biodata.filter((item) => String(item.brokerId) === String(registeredBroker.id)).length}</strong>
-                      <small>Bride and groom profiles</small>
-                    </article>
-                    <article className="broker-dashboard-stat">
-                      <span className="broker-dashboard-stat-icon">👁️</span>
-                      <span className="broker-dashboard-stat-label">Profile status</span>
-                      <strong>Demo</strong>
-                      <small>Not submitted for verification</small>
-                    </article>
-                    <article className="broker-dashboard-stat">
-                      <span className="broker-dashboard-stat-icon">📬</span>
-                      <span className="broker-dashboard-stat-label">Enquiries</span>
-                      <strong>0</strong>
-                      <small>Enquiries are not connected yet</small>
+                      <small>Saved in this browser only</small>
                     </article>
                   </div>
-
                   <div className="broker-dashboard-actions">
                     <article className="broker-dashboard-action-card">
                       <div className="broker-dashboard-action-icon">💑</div>
                       <div>
                         <h3>Manage Bride & Groom Biodata</h3>
-                        <p>Add sample biodata to your broker profile.</p>
+                        <p>Create a private biodata draft for your records.</p>
                       </div>
                       <button
                         type="button"
@@ -2525,7 +1973,7 @@ export default function BrokerMatrimony() {
                       <div>
                         <span className="broker-eyebrow">YOUR RECORDS</span>
                         <h3>Manage Bride & Groom Biodata</h3>
-                        <p>Review, edit, or remove the biodata you added in this session.</p>
+                        <p>Review and manage your private biodata drafts saved in this browser.</p>
                       </div>
                       <button type="button" className="broker-btn broker-btn-primary" onClick={() => {
                         setBiodataForm(emptyBiodataForm); setBiodataPhoto(""); setEditingBiodataId(null);
@@ -2559,9 +2007,11 @@ export default function BrokerMatrimony() {
                     )}
                   </section>
 
-                  <p className="broker-dashboard-demo-note">
-                    Demo only: biodata changes stay in this page session and may be lost after refresh. Enquiries, secure access, and admin approval are not connected to a backend. Only manage profiles with the person's permission.
-                  </p>
+                  <p className="broker-dashboard-info-note">
+                    Biodata entries are stored in this browser only. They are
+                    private drafts and are not uploaded to Wowmate or published
+                    to other members. Only store information you have permission
+                    to keep and share.                  </p>
                 </>
               )}
             </section>
@@ -2825,120 +2275,22 @@ export default function BrokerMatrimony() {
         </div>
       </section>
 
-      {/* CONTACT FORM */}
+      {/* CONTACT TEAM */}
       <section className="broker-section">
         <div className="broker-container">
           <div className="broker-section-heading">
             <div className="broker-eyebrow">Need Assistance?</div>
             <h2>Contact Our Team</h2>
             <p>
-              Send an enquiry about broker services or matchmaking
-              assistance.
+              For questions about broker services or matchmaking assistance,
+              contact the Wowmate team through our Contact page.
             </p>
+            <Link to="/contact" className="broker-btn broker-btn-primary">
+              Open Contact Page →
+            </Link>
           </div>
-
-          <form
-            className="broker-form-wrap"
-            onSubmit={handleContactSubmit}
-          >
-            <div className="broker-form-grid">
-              <div className="broker-field">
-                <label>Your Name *</label>
-
-                <input
-                  className="broker-input"
-                  value={contactForm.name}
-                  onChange={(event) =>
-                    setContactForm({
-                      ...contactForm,
-                      name: event.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="broker-field">
-                <label>Mobile Number *</label>
-
-                <input
-                  className="broker-input"
-                  type="tel"
-                  value={contactForm.phone}
-                  onChange={(event) =>
-                    setContactForm({
-                      ...contactForm,
-                      phone: event.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="broker-field">
-                <label>City *</label>
-
-                <input
-                  className="broker-input"
-                  value={contactForm.city}
-                  onChange={(event) =>
-                    setContactForm({
-                      ...contactForm,
-                      city: event.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="broker-field">
-                <label>Service Required *</label>
-
-                <select
-                  className="broker-input"
-                  value={contactForm.service}
-                  onChange={(event) =>
-                    setContactForm({
-                      ...contactForm,
-                      service: event.target.value,
-                    })
-                  }
-                >
-                  <option>Find a suitable match</option>
-                  <option>Become a broker</option>
-                  <option>Manage bride/groom biodata</option>
-                  <option>General enquiry</option>
-                </select>
-              </div>
-
-              <div className="broker-field broker-field-full">
-                <label>Message</label>
-
-                <textarea
-                  className="broker-input"
-                  value={contactForm.message}
-                  onChange={(event) =>
-                    setContactForm({
-                      ...contactForm,
-                      message: event.target.value,
-                    })
-                  }
-                  placeholder="How can we help you?"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="broker-btn broker-btn-primary"
-              style={{ width: "100%", marginTop: 20 }}
-            >
-              Submit Enquiry
-            </button>
-          </form>
         </div>
       </section>
-
       {/* FOOTER */}
       <footer className="broker-footer">
         <div className="broker-container">

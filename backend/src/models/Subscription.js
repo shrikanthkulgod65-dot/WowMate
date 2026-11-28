@@ -50,18 +50,40 @@ const subscriptionSchema = new mongoose.Schema(
       ref: "Payment",
       default: null,
     },
+
+    interestsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    priorityInterestsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    contactUnlocksUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    profileBoostsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
 
-// Existing subscription lookup index
 subscriptionSchema.index({
   user: 1,
   status: 1,
   expiresAt: 1,
 });
 
-// Prevent multiple subscriptions from using the same payment.
 subscriptionSchema.index(
   { payment: 1 },
   {

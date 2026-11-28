@@ -228,7 +228,7 @@ body {
       rgba(248, 245, 255, 0.85) 45%,
       rgba(248, 245, 255, 0.15) 100%
     ),
-    url("/image.png");
+    url("/wowmate-logo.webp");
   background-position: center right;
   background-size: cover;
   background-repeat: no-repeat;

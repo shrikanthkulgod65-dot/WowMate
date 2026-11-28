@@ -10,52 +10,52 @@ const RELIGION_COMMUNITIES = {
     "Kurmi", "Patel / Patidar", "Nair", "Ezhava", "Kamma",
     "Kapu", "Velama", "Gounder", "Thevar", "Chettiar",
     "Mudaliar", "Naidu", "Bania", "Agarwal", "Kayastha",
-    "Khatri", "Arora", "Gurjar", "Other"
+    "Khatri", "Arora", "Gurjar", "Other",
   ],
   Muslim: [
     "Sunni", "Shia", "Syed", "Sheikh", "Pathan", "Qureshi",
-    "Ansari", "Memon", "Bohra", "Khoja", "Mappila", "Other"
+    "Ansari", "Memon", "Bohra", "Khoja", "Mappila", "Other",
   ],
   Christian: [
     "Roman Catholic", "Latin Catholic", "Syrian Catholic",
     "Syrian Orthodox", "Jacobite", "Marthoma", "Protestant",
-    "Pentecostal", "CSI", "CNI", "Other"
+    "Pentecostal", "CSI", "CNI", "Other",
   ],
   Sikh: [
     "Jat Sikh", "Khatri", "Arora", "Ramgarhia", "Ahluwalia",
-    "Saini", "Mazhabi Sikh", "Other"
+    "Saini", "Mazhabi Sikh", "Other",
   ],
   Buddhist: [
     "Navayana", "Theravada", "Mahayana", "Vajrayana",
-    "Tibetan Buddhist", "Other"
+    "Tibetan Buddhist", "Other",
   ],
   Jain: [
     "Digambar", "Shwetambar", "Sthanakvasi",
-    "Terapanthi", "Oswal", "Other"
+    "Terapanthi", "Oswal", "Other",
   ],
   Jewish: [
-    "Bene Israel", "Baghdadi Jewish", "Cochin Jewish", "Other"
+    "Bene Israel", "Baghdadi Jewish", "Cochin Jewish", "Other",
   ],
   "Zoroastrian (Parsi)": [
-    "Parsi", "Irani Zoroastrian", "Other"
+    "Parsi", "Irani Zoroastrian", "Other",
   ],
   "Baháʼí": ["Baháʼí", "Other"],
   "Indigenous / Tribal faith": [
-    "Gond", "Santhal", "Bhil", "Munda", "Oraon", "Other"
+    "Gond", "Santhal", "Bhil", "Munda", "Oraon", "Other",
   ],
   Sanamahism: ["Meitei", "Other"],
   "Sarna faith": [
-    "Sarna", "Adivasi / Tribal community", "Other"
+    "Sarna", "Adivasi / Tribal community", "Other",
   ],
   "Donyi-Polo": [
-    "Adi", "Apatani", "Nyishi", "Galo", "Other"
+    "Adi", "Apatani", "Nyishi", "Galo", "Other",
   ],
   "Nature worship / Other indigenous faith": [
-    "Indigenous / Tribal community", "Other"
+    "Indigenous / Tribal community", "Other",
   ],
   "No religion": ["Not applicable"],
   Other: ["Other"],
-  "Prefer not to say": ["Prefer not to say"]
+  "Prefer not to say": ["Prefer not to say"],
 };
 
 export default function Home() {
@@ -75,7 +75,10 @@ export default function Home() {
         const user = savedUser ? JSON.parse(savedUser) : null;
         setHomeUser(user);
 
-        if (!user || String(user.role || "").toLowerCase() !== "user") {
+        if (
+          !user ||
+          String(user.role || "").toLowerCase() !== "user"
+        ) {
           setHomeProfile(null);
           return;
         }
@@ -84,19 +87,26 @@ export default function Home() {
           "apnishaadi_registered_profiles"
         );
 
-        const profiles = savedProfiles ? JSON.parse(savedProfiles) : [];
+        const profiles = savedProfiles
+          ? JSON.parse(savedProfiles)
+          : [];
 
         const profile = Array.isArray(profiles)
           ? profiles.find(
               (item) =>
                 item.id === `member-${user.id || user._id}` ||
-                item.email?.toLowerCase() === user.email?.toLowerCase()
+                item.email?.toLowerCase() ===
+                  user.email?.toLowerCase()
             ) || null
           : null;
 
         setHomeProfile(profile);
       } catch (error) {
-        console.error("Unable to load the Home account profile:", error);
+        console.error(
+          "Unable to load the Home account profile:",
+          error
+        );
+
         setHomeUser(null);
         setHomeProfile(null);
       }
@@ -112,8 +122,16 @@ export default function Home() {
     );
 
     return () => {
-      window.removeEventListener("authChanged", refreshHomeAccount);
-      window.removeEventListener("storage", refreshHomeAccount);
+      window.removeEventListener(
+        "authChanged",
+        refreshHomeAccount
+      );
+
+      window.removeEventListener(
+        "storage",
+        refreshHomeAccount
+      );
+
       window.removeEventListener(
         "apnishaadi-profiles-updated",
         refreshHomeAccount
@@ -121,11 +139,16 @@ export default function Home() {
     };
   }, []);
 
-  const homeRole = String(homeUser?.role || "").toLowerCase();
+  const homeRole = String(
+    homeUser?.role || ""
+  ).toLowerCase();
 
   const homeAction =
     homeRole === "broker"
-      ? { label: "My Broker Workspace →", link: "/broker-matrimony" }
+      ? {
+          label: "My Broker Workspace →",
+          link: "/broker-matrimony",
+        }
       : homeRole === "user"
         ? {
             label: homeProfile
@@ -133,7 +156,10 @@ export default function Home() {
               : "Complete Your Profile →",
             link: "/dashboard",
           }
-        : { label: "Create Your Profile →", link: "/register" };
+        : {
+            label: "Create Your Profile →",
+            link: "/register",
+          };
 
   const [search, setSearch] = useState({
     category: "",
@@ -148,11 +174,14 @@ export default function Home() {
     e.preventDefault();
 
     if (Number(search.minAge) > Number(search.maxAge)) {
-      alert("Minimum age cannot be greater than maximum age.");
+      window.alert(
+        "Minimum age cannot be greater than maximum age."
+      );
       return;
     }
 
     const params = new URLSearchParams(search);
+
     navigate(`/search-results?${params.toString()}`);
   };
 
@@ -160,50 +189,30 @@ export default function Home() {
     {
       icon: "💼",
       title: "Professional Matrimony",
-      description: "Meet educated professionals who share your ambitions.",
+      description:
+        "Meet educated professionals who share your ambitions.",
       link: "/professional-matrimony",
     },
     {
       icon: "🌾",
       title: "Farmer Matrimony",
-      description: "Find a partner who understands your roots and values.",
+      description:
+        "Find a partner who understands your roots and values.",
       link: "/farmer-matrimony",
     },
     {
       icon: "🤝",
       title: "Broker Services",
-      description: "Connect with matrimonial brokers and matchmaking services.",
+      description:
+        "Connect with matrimonial brokers and matchmaking services.",
       link: "/broker-matrimony",
     },
     {
       icon: "💖",
       title: "Discover Profiles",
-      description: "Explore profiles and discover meaningful connections.",
+      description:
+        "Explore profiles and discover meaningful connections.",
       link: "/discover-profiles",
-    },
-  ];
-
-  const profiles = [
-    {
-      name: "Priya",
-      age: 27,
-      profession: "Software Professional",
-      location: "Bengaluru",
-      image: "/image1.avif",
-    },
-    {
-      name: "Rahul",
-      age: 29,
-      profession: "Business Professional",
-      location: "Pune",
-      image: "/image2.jpeg",
-    },
-    {
-      name: "Ananya",
-      age: 26,
-      profession: "Doctor",
-      location: "Mumbai",
-      image: "/image3.png",
     },
   ];
 
@@ -494,51 +503,46 @@ export default function Home() {
           font-weight: 800;
         }
 
-        /* PROFILE CARDS */
+        /* REAL MEMBER DISCOVERY SECTION */
 
         .as-featured {
           background: #fff8fb;
         }
 
-        .as-profile-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 24px;
-        }
-
-        .as-profile-card {
-          overflow: hidden;
+        .as-member-preview {
+          max-width: 760px;
+          margin: 0 auto;
+          padding: 40px 28px;
           border: 1px solid var(--border);
-          border-radius: 16px;
+          border-radius: 18px;
           background: white;
-          transition: .25s ease;
+          box-shadow: 0 12px 35px #5618340b;
+          text-align: center;
         }
 
-        .as-profile-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 15px 35px #56183414;
+        .as-member-preview-icon {
+          display: grid;
+          width: 68px;
+          height: 68px;
+          margin: 0 auto 20px;
+          place-items: center;
+          border-radius: 50%;
+          background: #f5f0ff;
+          font-size: 31px;
         }
 
-        .as-profile-image {
-          width: 100%;
-          height: 300px;
-          object-fit: cover;
-          background: #f7e8ef;
-        }
-
-        .as-profile-info {
-          padding: 22px;
-        }
-
-        .as-profile-info h3 {
+        .as-member-preview h3 {
           margin: 0 0 12px;
-          font-size: 21px;
+          color: var(--text);
+          font-size: 23px;
         }
 
-        .as-profile-info p {
+        .as-member-preview p {
+          max-width: 560px;
+          margin: 0 auto 24px;
           color: var(--muted);
           font-size: 14px;
-          line-height: 1.6;
+          line-height: 1.8;
         }
 
         .as-center {
@@ -612,66 +616,6 @@ export default function Home() {
           color: var(--primary);
         }
 
-        /* PRICING */
-
-        .as-pricing-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 24px;
-        }
-
-        .as-price-card {
-          display: flex;
-          flex-direction: column;
-          padding: 30px;
-          border: 1px solid var(--border);
-          border-radius: 16px;
-          background: white;
-          box-shadow: 0 10px 30px #56183408;
-        }
-
-        .as-price-card h3 {
-          margin: 0 0 10px;
-          font-size: 23px;
-        }
-
-        .as-price {
-          margin: 18px 0;
-          color: var(--primary);
-          font-size: 32px;
-          font-weight: 800;
-        }
-
-        .as-price small {
-          color: var(--muted);
-          font-size: 12px;
-          font-weight: 400;
-        }
-
-        .as-price-card ul {
-          display: grid;
-          gap: 14px;
-          padding: 0;
-          margin: 0 0 25px;
-          list-style: none;
-        }
-
-        .as-price-card li {
-          color: var(--muted);
-          font-size: 14px;
-          line-height: 1.6;
-        }
-
-        .as-price-card .as-btn {
-          margin-top: auto;
-          text-align: center;
-        }
-
-        .as-price-featured {
-          border: 2px solid var(--primary);
-          box-shadow: 0 15px 40px #bd14551a;
-        }
-
         /* RESPONSIVE */
 
         @media (max-width: 1000px) {
@@ -684,10 +628,6 @@ export default function Home() {
           }
 
           .as-category-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .as-pricing-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
@@ -714,19 +654,8 @@ export default function Home() {
             padding: 22px 17px;
           }
 
-          .as-profile-grid,
-          .as-steps-grid,
-          .as-pricing-grid {
+          .as-steps-grid {
             grid-template-columns: 1fr;
-          }
-
-          .as-profile-grid {
-            max-width: 420px;
-            margin: auto;
-          }
-
-          .as-profile-image {
-            height: 320px;
           }
 
           .as-category-grid {
@@ -827,13 +756,18 @@ export default function Home() {
             <form onSubmit={handleSearch}>
               <div className="as-search-grid">
                 <div className="as-field">
-                  <label htmlFor="category">Matrimony Category</label>
+                  <label htmlFor="category">
+                    Matrimony Category
+                  </label>
 
                   <select
                     id="category"
                     value={search.category}
                     onChange={(e) =>
-                      setSearch({ ...search, category: e.target.value })
+                      setSearch({
+                        ...search,
+                        category: e.target.value,
+                      })
                     }
                   >
                     <option value="">All Categories</option>
@@ -850,7 +784,10 @@ export default function Home() {
                     id="lookingFor"
                     value={search.lookingFor}
                     onChange={(e) =>
-                      setSearch({ ...search, lookingFor: e.target.value })
+                      setSearch({
+                        ...search,
+                        lookingFor: e.target.value,
+                      })
                     }
                   >
                     <option value="">Any</option>
@@ -858,8 +795,6 @@ export default function Home() {
                     <option value="groom">Groom</option>
                   </select>
                 </div>
-
-                {/* NEW: RELIGION FILTER */}
 
                 <div className="as-field">
                   <label htmlFor="religion">Religion</label>
@@ -877,18 +812,20 @@ export default function Home() {
                   >
                     <option value="">All Religions</option>
 
-                    {Object.keys(RELIGION_COMMUNITIES).map((religion) => (
-                      <option key={religion} value={religion}>
-                        {religion}
-                      </option>
-                    ))}
+                    {Object.keys(RELIGION_COMMUNITIES).map(
+                      (religion) => (
+                        <option key={religion} value={religion}>
+                          {religion}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
 
-                {/* NEW: CASTE / COMMUNITY FILTER */}
-
                 <div className="as-field">
-                  <label htmlFor="community">Caste / Community</label>
+                  <label htmlFor="community">
+                    Caste / Community
+                  </label>
 
                   <select
                     id="community"
@@ -903,13 +840,13 @@ export default function Home() {
                   >
                     <option value="">All Communities</option>
 
-                    {(RELIGION_COMMUNITIES[search.religion] || []).map(
-                      (community) => (
-                        <option key={community} value={community}>
-                          {community}
-                        </option>
-                      )
-                    )}
+                    {(
+                      RELIGION_COMMUNITIES[search.religion] || []
+                    ).map((community) => (
+                      <option key={community} value={community}>
+                        {community}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -920,16 +857,20 @@ export default function Home() {
                     id="minAge"
                     value={search.minAge}
                     onChange={(e) =>
-                      setSearch({ ...search, minAge: e.target.value })
+                      setSearch({
+                        ...search,
+                        minAge: e.target.value,
+                      })
                     }
                   >
-                    {Array.from({ length: 28 }, (_, i) => i + 18).map(
-                      (age) => (
-                        <option key={age} value={age}>
-                          {age} years
-                        </option>
-                      )
-                    )}
+                    {Array.from(
+                      { length: 28 },
+                      (_, i) => i + 18
+                    ).map((age) => (
+                      <option key={age} value={age}>
+                        {age} years
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -940,16 +881,20 @@ export default function Home() {
                     id="maxAge"
                     value={search.maxAge}
                     onChange={(e) =>
-                      setSearch({ ...search, maxAge: e.target.value })
+                      setSearch({
+                        ...search,
+                        maxAge: e.target.value,
+                      })
                     }
                   >
-                    {Array.from({ length: 28 }, (_, i) => i + 18).map(
-                      (age) => (
-                        <option key={age} value={age}>
-                          {age} years
-                        </option>
-                      )
-                    )}
+                    {Array.from(
+                      { length: 28 },
+                      (_, i) => i + 18
+                    ).map((age) => (
+                      <option key={age} value={age}>
+                        {age} years
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -970,8 +915,8 @@ export default function Home() {
             <span>Explore Wowmate</span>
             <h2>Find a Match That Fits Your World</h2>
             <p>
-              Discover matrimonial communities that reflect your lifestyle,
-              values, and dreams for the future.
+              Discover matrimonial communities that reflect your
+              lifestyle, values, and dreams for the future.
             </p>
           </div>
 
@@ -982,7 +927,9 @@ export default function Home() {
                 className="as-category-card"
                 key={category.title}
               >
-                <div className="as-category-icon">{category.icon}</div>
+                <div className="as-category-icon">
+                  {category.icon}
+                </div>
 
                 <h3>{category.title}</h3>
 
@@ -997,52 +944,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURED PROFILES */}
+      {/* REAL MEMBER DISCOVERY — NO HARD-CODED SAMPLE PROFILES */}
 
       <section className="as-section as-featured">
         <div className="as-container">
           <div className="as-heading">
             <span>Discover Connections</span>
-            <h2>Featured Profiles</h2>
+            <h2>Explore Member Profiles</h2>
             <p>
-              Explore sample profiles and discover the possibilities of
-              finding someone special.
+              Discover profiles shared by registered members.
+              Sign in to explore profiles and connect with members.
             </p>
           </div>
 
-          <div className="as-profile-grid">
-            {profiles.map((profile) => (
-              <article className="as-profile-card" key={profile.name}>
-                <img
-                  className="as-profile-image"
-                  src={profile.image}
-                  alt={`Sample profile of ${profile.name}`}
-                  loading="lazy"
-                />
+          <div className="as-member-preview">
+            <div className="as-member-preview-icon">
+              💖
+            </div>
 
-                <div className="as-profile-info">
-                  <h3>
-                    {profile.name}, {profile.age}
-                  </h3>
+            <h3>Ready to find your life partner?</h3>
 
-                  <p>💼 {profile.profession}</p>
-                  <p>📍 {profile.location}</p>
-                  <p>Sample profile · Demo content</p>
+            <p>
+              Explore member profiles, view matching preferences,
+              and take the next step in your matrimony journey.
+            </p>
 
-                  <Link
-                    to="/discover-profiles"
-                    className="as-btn"
-                  >
-                    Explore Profiles →
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="as-center">
-            <Link to="/discover-profiles" className="as-btn">
-              View All Profiles →
+            <Link
+              to="/discover-profiles"
+              className="as-btn"
+            >
+              Explore Real Profiles →
             </Link>
           </div>
         </div>
@@ -1065,8 +996,8 @@ export default function Home() {
               <div className="as-step-number">1</div>
               <h3>Create Your Profile</h3>
               <p>
-                Share your background, interests, values, and the qualities
-                you hope to find in your life partner.
+                Share your background, interests, values, and the
+                qualities you hope to find in your life partner.
               </p>
             </article>
 
@@ -1074,8 +1005,8 @@ export default function Home() {
               <div className="as-step-number">2</div>
               <h3>Discover Your Match</h3>
               <p>
-                Explore profiles and discover people whose values and
-                future plans align with yours.
+                Explore profiles and discover people whose values
+                and future plans align with yours.
               </p>
             </article>
 
@@ -1099,8 +1030,8 @@ export default function Home() {
             <h2>Your Beautiful Story Could Begin Today</h2>
 
             <p>
-              Create your profile, discover meaningful connections, and
-              take the first step towards your forever.
+              Create your profile, discover meaningful connections,
+              and take the first step towards your forever.
             </p>
 
             <Link to={homeAction.link} className="as-btn">
@@ -1118,5 +1049,3 @@ export default function Home() {
     </main>
   );
 }
-
-
